@@ -1,9 +1,9 @@
 #import sys; print('Python %s on %s' % (sys.version, sys.platform))
 #sys.path.extend(['/home/matheusfdario/Documentos/LASSIP/rep/Virtual-Encoder-ECNDT-2023'])
 import matplotlib.pyplot as plt
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.phase_correlation import *
-from visual_encoder.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.phase_correlation import *
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
 
 # Figure 3 (d) info:
 # Geometry : Plane

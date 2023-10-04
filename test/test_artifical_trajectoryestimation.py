@@ -1,15 +1,15 @@
 import matplotlib.pyplot as plt
-from visual_encoder.trajectory_estimators import *
-from visual_encoder.svd_decomposition import *
+from virtualencoder.visualodometry.trajectory_estimators import *
+from virtualencoder.visualodometry.svd_decomposition import *
 from PIL import Image
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-data_root = "/home/tekalid/repos/AUSPEX/test/visual_encoder/data/images/"
+data_root = "/home/tekalid/repos/AUSPEX/test/virtualencoder/data/images/"
 myImage = Image.open(data_root + "rgb_example.jpeg");
 img_rgb = np.array(myImage)
 

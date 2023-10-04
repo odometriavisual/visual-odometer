@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
-from visual_encoder.dsp_utils import ideal_lowpass
-from visual_encoder.phase_correlation import *
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.trajectory_estimators import get_img
+from virtualencoder.visualodometry.dsp_utils import ideal_lowpass
+from virtualencoder.visualodometry.phase_correlation import *
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.trajectory_estimators import get_img
 from scipy.sparse.linalg import svds
-from visual_encoder.svd_decomposition import phase_unwrapping, linear_regression
+from virtualencoder.visualodometry.svd_decomposition import phase_unwrapping, linear_regression
 
 # Arbitrary shot and
 shot = 250

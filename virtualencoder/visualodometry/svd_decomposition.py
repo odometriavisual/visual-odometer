@@ -1,5 +1,5 @@
 import numpy as np
-from visual_encoder.dsp_utils import crosspower_spectrum
+from virtualencoder.visualodometry.dsp_utils import crosspower_spectrum
 from scipy.sparse.linalg import svds
 
 

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
-from visual_encoder.phase_correlation import *
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.phase_correlation import *
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
 
 # Figure 3 (d) info:
 # Geometry : Plane

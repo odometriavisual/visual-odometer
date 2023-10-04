@@ -1,8 +1,8 @@
-from visual_encoder.dip_utils import gaussian_noise, salt_and_pepper, apply_window
-from visual_encoder.phase_correlation import pc_method
-from visual_encoder.svd_decomposition import svd_method
+from virtualencoder.visualodometry.dip_utils import gaussian_noise, salt_and_pepper, apply_window
+from virtualencoder.visualodometry.phase_correlation import pc_method
+from virtualencoder.visualodometry.svd_decomposition import svd_method
 from scipy.spatial.transform import Rotation as R
-from visual_encoder.utils import *
+from virtualencoder.visualodometry.utils import *
 
 
 def compute_new_position(deltax, deltay, x0, y0, z0, rot_calibration=0, quaternion=None, euler=None):

@@ -1,8 +1,8 @@
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.trajectory_estimators import *
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.trajectory_estimators import *
 import matplotlib.pyplot as plt
-from visual_encoder.utils import *
+from virtualencoder.visualodometry.utils import *
 from scipy.spatial.transform import Rotation as R
 
 def rms(vec):

@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
-from visual_encoder.trajectory_estimators import get_img
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.trajectory_estimators import get_img
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
 import matplotlib
 gui_env = ['GTK3Agg', 'GTK3Cairo', 'GTK4Agg', 'GTK4Cairo', 'MacOSX', 'nbAgg', 'QtAgg', 'QtCairo', 'Qt5Agg', 'Qt5Cairo', 'TkAgg', 'TkCairo', 'WebAgg', 'WX', 'WXAgg', 'WXCairo', 'agg', 'cairo', 'pdf', 'pgf', 'ps', 'svg', 'template']
 

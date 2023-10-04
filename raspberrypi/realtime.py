@@ -13,9 +13,9 @@ import adafruit_bno055
 import numpy as np
 from PIL import Image, ImageOps
 from scipy.fft import fft2, fftshift
-from visual_encoder.svd_decomposition import svd_method
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.tajectory_params import TrajectoryParams, get_img
+from virtualencoder.visualodometry.svd_decomposition import svd_method
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams, get_img
 from io import BytesIO
 # import serial
 # import serial.threaded

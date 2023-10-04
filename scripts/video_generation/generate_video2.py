@@ -1,5 +1,5 @@
-# Import visual_encoder packages:
-from visual_encoder.trajectory_estimators import get_img
+# Import virtualencoder packages:
+from virtualencoder.visualodometry.trajectory_estimators import get_img
 
 # Import external packages:
 import matplotlib.pyplot as plt

@@ -1,4 +1,4 @@
-from visual_encoder.trajectory_estimators import get_quat_data, convert_to_3d
+from virtualencoder.visualodometry.trajectory_estimators import get_quat_data, convert_to_3d
 import numpy as np
 import matplotlib.pyplot as plt
 

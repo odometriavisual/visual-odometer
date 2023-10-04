@@ -1,8 +1,8 @@
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.trajectory_estimators import compute_total_trajectory_path, convert_to_3d
-from visual_encoder.phase_correlation import crosspower_spectrum
-from visual_encoder.trajectory_estimators import get_img
-from visual_encoder.svd_decomposition import linear_regression
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.trajectory_estimators import compute_total_trajectory_path, convert_to_3d
+from virtualencoder.visualodometry.phase_correlation import crosspower_spectrum
+from virtualencoder.visualodometry.trajectory_estimators import get_img
+from virtualencoder.visualodometry.svd_decomposition import linear_regression
 from scipy.sparse.linalg import svds
 import numpy as np
 

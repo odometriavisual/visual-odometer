@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
-from visual_encoder.trajectory_estimators import get_img
-from visual_encoder.svd_decomposition import *
-from visual_encoder.phase_correlation import *
-from visual_encoder.tajectory_params import TrajectoryParams
-from visual_encoder.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.trajectory_estimators import get_img
+from virtualencoder.visualodometry.svd_decomposition import *
+from virtualencoder.visualodometry.phase_correlation import *
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
 from scipy import signal
 from PIL import Image
 import time
