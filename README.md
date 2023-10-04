@@ -1,4 +1,4 @@
-# Virtual-Encoder-ECNDT-2023
+# VirtualEncoder
 
 This repository contains scripts which generate the results presented in "Virtual encoder: a two-dimension visual odometer for NDT".
 
