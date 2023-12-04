@@ -8,7 +8,7 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 import numpy as np
 from PIL import Image, ImageOps
@@ -70,6 +70,28 @@ escalaPyCamY = 0.027715058926976663
 arrayUtilitario = [[gpio.LOW, gpio.LOW], [gpio.LOW, gpio.HIGH],[gpio.HIGH, gpio.HIGH], [gpio.HIGH, gpio.LOW], ]
 # --- fim do setup GPIO ---#
 
+def atualizarPos(owner, x, y, z=0):
+
+    diferencas = [x,y,0]
+    multiplicador = [0, 0, 0]
+
+    for i in range(3):
+        if diferencas[i] > 0:
+            multiplicador[i] = -1
+        elif diferencas[i] < 0:
+            multiplicador[i] = 1
+
+    for i in range(3):
+        while diferencas[i] != 0:
+            owner.contador[i] = (owner.contador[i] + multiplicador[i]) % 4
+            diferencas[i] = diferencas[i] + multiplicador[i]
+            gpio.output(encoderPrimary[i],
+                        arrayUtilitario[owner.contador[i]][0])
+            time.sleep(1/10000)
+            gpio.output(encoderSecondary[i],
+                        arrayUtilitario[owner.contador[i]][1])
+            time.sleep(1/10000)
+        multiplicador[i] = 0
 
 def atualizarPos(owner, x, y, z=0):
 
@@ -90,6 +112,7 @@ def atualizarPos(owner, x, y, z=0):
                         arrayUtilitario[owner.contador[i]][0])
             gpio.output(encoderSecondary[i],
                         arrayUtilitario[owner.contador[i]][1])
+            
         multiplicador[i] = 0
 
 
