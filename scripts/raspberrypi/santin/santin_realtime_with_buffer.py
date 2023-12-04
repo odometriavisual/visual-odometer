@@ -1,4 +1,4 @@
-import io
+mport io
 import os
 import time
 import threading
@@ -8,7 +8,7 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 import numpy as np
 from PIL import Image, ImageOps
@@ -27,11 +27,11 @@ svd_param = DisplacementParams(
     method="svd", spatial_window='Blackman-Harris', frequency_window="Stone_et_al_2001")
 svd_traj = TrajectoryParams(svd_param)
 x0, y0, z0 = (0, 0, 0)
-curr_img = 0
+# curr_img = 0
 prev_img = 0
-fps = 10
+fps = 15
 period = 1/fps
-tot_time = 30
+tot_time = 60
 frame_limit = 1/fps * 1e6  # in us
 img_width = 640
 img_height = 480
@@ -42,14 +42,14 @@ img_height = 480
 # define que as referências de pinagem do raspberry pi devem ser referentes a lista BCM
 gpio.setmode(gpio.BCM)
 
-Encoder1PinPhaseA = 5
-Encoder1PinPhaseB = 6
+Encoder1PinPhaseA = 13
+Encoder1PinPhaseB = 19
 
-Encoder2PinPhaseA = 13
-Encoder2PinPhaseB = 19
+Encoder2PinPhaseA = 26
+Encoder2PinPhaseB = 21
 
-Encoder3PinPhaseA = 26
-Encoder3PinPhaseB = 21
+Encoder3PinPhaseA = 5
+Encoder3PinPhaseB = 6
 
 encoderPrimary = [Encoder1PinPhaseA, Encoder2PinPhaseA, Encoder3PinPhaseA]
 encoderSecondary = [Encoder1PinPhaseB, Encoder2PinPhaseB, Encoder3PinPhaseB]
@@ -62,7 +62,7 @@ for i in range(3):
 
 coordenadasAtuaisNoPanther = [0, 0]
 passoDirecaoPanther = [0, 0]
-escalaPanther = 1/10
+escalaPanther = 0.1
 
 escalaPyCamX = 0.02151467169232321
 escalaPyCamY = 0.027715058926976663
@@ -74,9 +74,7 @@ arrayUtilitario = [[gpio.HIGH, gpio.HIGH], [gpio.HIGH, gpio.LOW], [
 
 def atualizarPos(owner, x, y, z=0):
 
-    diferencas = [round(x*escalaPyCamX/escalaPanther),
-                  round(y*escalaPyCamY/escalaPanther),
-                  0]
+    diferencas = [x,y,0]
     multiplicador = [0, 0, 0]
 
     for i in range(3):
@@ -91,8 +89,10 @@ def atualizarPos(owner, x, y, z=0):
             diferencas[i] = diferencas[i] + multiplicador[i]
             gpio.output(encoderPrimary[i],
                         arrayUtilitario[owner.contador[i]][0])
+            time.sleep(1/10000)
             gpio.output(encoderSecondary[i],
                         arrayUtilitario[owner.contador[i]][1])
+            time.sleep(1/10000)
         multiplicador[i] = 0
 
 
@@ -115,20 +115,29 @@ class ImageProcessor(threading.Thread):
                     self.stream.seek(0)
                     frame_num = self.owner.frame_num
                     self.owner.frame_num += 1
-                    curr_img = np.asarray(ImageOps.grayscale(
+                    if (self.owner.frame_num > 1):
+                        self.owner.last_img_buffer = self.owner.actual_img_buffer
+                    self.owner.actual_img_buffer = np.asarray(ImageOps.grayscale(
                         Image.open(self.stream)))  # Lê e guarda foto atual
-                    self.owner.img_buffer[frame_num, :, :] = curr_img
+
+                    # self.owner.img_buffer[frame_num, :, :] = curr_img
                     # self.owner.fft_buffer[frame_num, :, :] = fft2(curr_img)
                     if self.owner.frame_num > 10:
                         # F = self.owner.fft_buffer[self.owner.frame_num, :, :]
                         # G = self.owner.fft_buffer[self.owner.frame_num - 1, :, :]
-                        f = self.owner.img_buffer[frame_num, :, :]
-                        g = self.owner.img_buffer[frame_num-1, :, :]
+                        f = self.owner.actual_img_buffer
+                        g = self.owner.last_img_buffer
                         deltax, deltay = svd_method(
                             f, g, downsampling_factor=2)
                         with self.owner.gpio_lock:
+                            deltax = round(deltax/escalaPanther)
+                            deltay = round(deltay/escalaPanther)
                             atualizarPos(self.owner, deltax, deltay)
-
+                        self.owner.x_coord = self.owner.x_coord + deltax
+                        self.owner.y_coord = self.owner.y_coord + deltay
+                        print('(%d;%d)' % (
+                            self.owner.x_coord,
+                            self.owner.y_coord))
                     elif self.owner.frame_num >= fps * tot_time:
                         self.terminated = True
                     else:
@@ -151,14 +160,15 @@ class ProcessOutput(io.BufferedIOBase):
         # to control access between threads
         self.lock = threading.Lock()
         self.gpio_lock = threading.Lock()
-        self.pool = [ImageProcessor(self) for i in range(3)]
+        self.pool = [ImageProcessor(self) for i in range(4)]
         self.processor = None
         self.frame_num = 0
         self.contador = [0, 0, 0]  # adicionando array de contador
-        self.img_buffer = np.zeros(
-            shape=(fps * tot_time, img_height, img_width))
-        self.fft_buffer = np.zeros(
-            shape=(fps * tot_time, img_height, img_width), dtype=complex)
+        self.last_img_buffer = np.zeros(shape=(img_height, img_width))
+        self.actual_img_buffer = np.zeros(shape=(img_height, img_width))
+
+        # self.fft_buffer = np.zeros(shape=(fps, img_height, img_width), dtype=complex)
+
         self.x_coord = 0.
         self.y_coord = 0.
 
@@ -208,7 +218,7 @@ class ProcessOutput(io.BufferedIOBase):
             proc.join()
         time.sleep(1)
         # print(self.ser.in_waiting)
-       # print(self.ser.out_waiting)
+        # print(self.ser.out_waiting)
         time.sleep(1)
 
 

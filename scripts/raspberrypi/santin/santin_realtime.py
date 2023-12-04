@@ -8,7 +8,7 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 import numpy as np
 from PIL import Image, ImageOps
@@ -29,9 +29,9 @@ svd_traj = TrajectoryParams(svd_param)
 x0, y0, z0 = (0, 0, 0)
 curr_img = 0
 prev_img = 0
-fps = 10
+fps = 15
 period = 1/fps
-tot_time = 30
+tot_time = 100
 frame_limit = 1/fps * 1e6  # in us
 img_width = 640
 img_height = 480
@@ -62,7 +62,7 @@ for i in range(3):
 
 coordenadasAtuaisNoPanther = [0, 0]
 passoDirecaoPanther = [0, 0]
-escalaPanther = 1/10
+escalaPanther = 1
 
 escalaPyCamX = 0.02151467169232321
 escalaPyCamY = 0.027715058926976663
@@ -74,9 +74,10 @@ arrayUtilitario = [[gpio.HIGH, gpio.HIGH], [gpio.HIGH, gpio.LOW], [
 
 def atualizarPos(owner, x, y, z=0):
 
-    diferencas = [round(x*escalaPyCamX/escalaPanther),
-                  round(y*escalaPyCamY/escalaPanther),
+    diferencas = [round(x/escalaPanther),
+                  round(y/escalaPanther),
                   0]
+
     multiplicador = [0, 0, 0]
 
     for i in range(3):
@@ -128,7 +129,11 @@ class ImageProcessor(threading.Thread):
                             f, g, downsampling_factor=2)
                         with self.owner.gpio_lock:
                             atualizarPos(self.owner, deltax, deltay)
-
+                        self.owner.x_coord = self.owner.x_coord + deltax
+                        self.owner.y_coord = self.owner.y_coord + deltay
+                        print('(%d;%d)' % (
+                            self.owner.x_coord,
+                            self.owner.y_coord))
                     elif self.owner.frame_num >= fps * tot_time:
                         self.terminated = True
                     else:
@@ -151,7 +156,7 @@ class ProcessOutput(io.BufferedIOBase):
         # to control access between threads
         self.lock = threading.Lock()
         self.gpio_lock = threading.Lock()
-        self.pool = [ImageProcessor(self) for i in range(3)]
+        self.pool = [ImageProcessor(self) for i in range(4)]
         self.processor = None
         self.frame_num = 0
         self.contador = [0, 0, 0]  # adicionando array de contador
