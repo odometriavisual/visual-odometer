@@ -1,4 +1,5 @@
 import io
+import os
 import time
 import threading
 from picamera2 import Picamera2
@@ -7,8 +8,7 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-import board
-import adafruit_bno055
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 import numpy as np
 from PIL import Image, ImageOps

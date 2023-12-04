@@ -1,4 +1,5 @@
-import io
+mport io
+import os
 import time
 import threading
 from picamera2 import Picamera2
@@ -7,15 +8,14 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-import board
-import adafruit_bno055
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 import numpy as np
 from PIL import Image, ImageOps
 from scipy.fft import fft2, fftshift
-from visual_encoder.svd_decomposition import svd_method
-from visual_encoder.displacement_params import DisplacementParams
-from visual_encoder.tajectory_params import TrajectoryParams, get_img
+from virtualencoder.visualodometry.svd_decomposition import svd_method
+from virtualencoder.visualodometry.displacement_params import DisplacementParams
+from virtualencoder.visualodometry.tajectory_params import TrajectoryParams, get_img
 from io import BytesIO
 # import serial
 # import serial.threaded
