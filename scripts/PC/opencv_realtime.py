@@ -1,12 +1,8 @@
 import cv2
 
-from visual_encoder.svd_decomposition import optimized_svd_method
+from virtualencoder.visualodometry.svd_decomposition import optimized_svd_method
 import time
-
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image, ImageOps
-from visual_encoder.dsp_utils import image_preprocessing, cv2_to_nparray_grayscale
+from virtualencoder.visualodometry.dsp_utils import cv2_to_nparray_grayscale, image_preprocessing
 
 #img_width = 640
 #img_height = 480

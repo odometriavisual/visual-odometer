@@ -1,4 +1,6 @@
-matplotlib
-scipy
-numpy
-Pillow
+matplotlib~=3.8.3
+scipy~=1.12.0
+numpy~=1.26.4
+Pillow~=10.2.0
+
+opencv-python~=4.9.0.80
