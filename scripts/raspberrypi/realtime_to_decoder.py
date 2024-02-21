@@ -8,7 +8,7 @@ from picamera2.encoders import JpegEncoder
 
 import logging
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 import numpy as np
 from PIL import Image, ImageOps
