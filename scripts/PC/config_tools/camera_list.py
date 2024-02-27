@@ -1,6 +1,7 @@
 import cv2
 
-def list_ports():
+#Código para mostrar a lista de câmeras disponíveis
+def list_ports(start_port = 0, end_port = 10):
     """
     Testa as portas e retorna uma tupla com as portas disponíveis e as que estão funcionando.
     """
@@ -8,12 +9,9 @@ def list_ports():
     working_ports = []
     available_ports = []
 
-    # Limitar o intervalo de portas de câmera a serem verificadas
-    start_port = 0
-    end_port = 10  # Escolha um valor razoável de acordo com o número de portas disponíveis em seu sistema
-
     for dev_port in range(start_port, end_port):
         try:
+            print("Pegando o acesso de uma câmera, isso pode demorar um pouco:")
             camera = cv2.VideoCapture(dev_port)
             if not camera.isOpened():
                 non_working_ports.append(dev_port)
