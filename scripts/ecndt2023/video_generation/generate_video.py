@@ -41,7 +41,6 @@ shot = 1
 
 print("Início do loop de geração de vídeo...")
 if generate_video == True:
-    # with writer.saving(fig, result_foldername + "/" + video_title + ".mp4", dpi=300):
     with writer.saving(fig, results_path + videotitle + ".mp4", dpi=300):
         for shot in range(2, svd_traj.get_coords().shape[0]):
             plt.suptitle(f"Shot = {shot}")

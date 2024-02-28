@@ -59,3 +59,5 @@ fabric.properties
 
 # *.iml
 # modules.xml
+plots/
+output/

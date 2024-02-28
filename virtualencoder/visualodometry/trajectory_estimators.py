@@ -1,4 +1,4 @@
-from virtualencoder.visualodometry.dip_utils import gaussian_noise, salt_and_pepper, apply_window
+from virtualencoder.visualodometry.image_utils import gaussian_noise, salt_and_pepper, apply_window
 from virtualencoder.visualodometry.phase_correlation import pc_method
 from virtualencoder.visualodometry.svd_decomposition import svd_method
 from scipy.spatial.transform import Rotation as R
