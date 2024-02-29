@@ -5,14 +5,12 @@ import matplotlib.pyplot as plt
 
 from virtualencoder.visualodometry.score_focus import score_teng
 
-camera_id = 1  # Altere o id da câmera aqui
+camera_id = 0  # Altere o id da câmera aqui
 total_rec_time = 60  # seconds
 max_fps = 30  # Define o FPS máximo desejado
 
-# Inicialize as listasc para armazenar os scores
 score_history = []
 
-# Define a função para atualizar e exibir o gráfico em tempo real
 def update_graph(score):
     global score_history  # Declarar como global
     score_history.append(score)
@@ -27,8 +25,10 @@ def update_graph(score):
 
 # define a video capture object
 print('Requesting access to camera. This may take a while...')
+
 vid = cv2.VideoCapture(camera_id)
 print('Got access to camera!')
+vid.set(cv2.CAP_PROP_EXPOSURE, -14)
 
 frame_num = 0  # para guardar o número de frames.
 start_time = time.time()
@@ -52,4 +52,4 @@ while time.time() <= start_time + total_rec_time:
     time.sleep(wait_time)
 
 vid.release()
-plt.show()  # Exibe o gráfico final após a execução do loop
+plt.show()

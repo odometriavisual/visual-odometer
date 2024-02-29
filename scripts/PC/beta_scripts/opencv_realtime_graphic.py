@@ -10,7 +10,7 @@ from virtualencoder.visualodometry.svd_decomposition import optimized_svd_method
 
 #img_width = 640
 #img_height = 480
-camera_id = 1 #Altere o id da câmera aqui
+camera_id = 0 #Altere o id da câmera aqui
 total_rec_time = 60 #seconds
 escalaPyCamX = -0.02151467169232321
 escalaPyCamY = 0.027715058926976663
@@ -26,7 +26,7 @@ print('Got access to camera!')
 # vid.set(cv2.CAP_PROP_FRAME_HEIGHT, img_height)
 #
 # print('Resolution is set! Setting exposure...')
-# vid.set(cv2.CAP_PROP_EXPOSURE, 10)
+vid.set(cv2.CAP_PROP_EXPOSURE, -14)
 # print("Exposure is set!")
 
 frame_num = 0 #para guardar o número de frames.
