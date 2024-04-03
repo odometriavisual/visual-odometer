@@ -20,44 +20,44 @@ resto_y = 0
 intxacumulado = 0
 intyacumulado = 0
 
-def atualizarPos(x,y):
-    global resto_x, resto_y, arduino, intxacumulado, intyacumulado
-
-    x += resto_x
-    y += resto_y
-
-    intx = int(x)
-    inty = int(y)
-
-    text_to_send = f"0,{intx}, {inty} \n"
-    arduino.write(text_to_send.encode())
-    #_ = arduino.readline()
-
-    resto_x = x - intx
-    resto_y = y - inty
-
-if config.usb_com_port is None:
-    try:
-        print("Iniciando setup automático de comunicação Serial")
-        serial_port_list = serial.tools.list_ports.comports()
-        serial_port_list_size = len(serial_port_list)
-        if (serial_port_list_size == 0):
-            print ("Não foi detectado nenhuma comunicação serial compatível")
-        elif (serial_port_list_size > 1):
-            warnings.warn("ATENÇÃO - Foram encontradas mais de uma porta serial, o código exercutaa apenas com uma delas")
-        selected_port = sorted(serial_port_list)[0]
-        arduino = serial.Serial(port=selected_port.name, baudrate=115200, timeout=1)
-        state = arduino.read()
-        print(f"Porta {selected_port.name} conectada")
-    except:
-        print("Erro na conexão da comunicação serial, verifique se o encoder está conectado")
-        exit()
-else:
-    try:
-        arduino = serial.Serial(port=config.usb_com_port, baudrate=115200, timeout=1)
-    except:
-        print("Erro na conexão da comunicação serial, é recomendado alterar a variável usb_com_port no config.py para None")
-        exit()
+# def atualizarPos(x,y):
+#     global resto_x, resto_y, arduino, intxacumulado, intyacumulado
+#
+#     x += resto_x
+#     y += resto_y
+#
+#     intx = int(x)
+#     inty = int(y)
+#
+#     text_to_send = f"0,{intx}, {inty} \n"
+#     arduino.write(text_to_send.encode())
+#     #_ = arduino.readline()
+#
+#     resto_x = x - intx
+#     resto_y = y - inty
+#
+# if config.usb_com_port is None:
+#     try:
+#         print("Iniciando setup automático de comunicação Serial")
+#         serial_port_list = serial.tools.list_ports.comports()
+#         serial_port_list_size = len(serial_port_list)
+#         if (serial_port_list_size == 0):
+#             print ("Não foi detectado nenhuma comunicação serial compatível")
+#         elif (serial_port_list_size > 1):
+#             warnings.warn("ATENÇÃO - Foram encontradas mais de uma porta serial, o código exercutaa apenas com uma delas")
+#         selected_port = sorted(serial_port_list)[0]
+#         arduino = serial.Serial(port=selected_port.name, baudrate=115200, timeout=1)
+#         state = arduino.read()
+#         print(f"Porta {selected_port.name} conectada")
+#     except:
+#         print("Erro na conexão da comunicação serial, verifique se o encoder está conectado")
+#         exit()
+# else:
+#     try:
+#         arduino = serial.Serial(port=config.usb_com_port, baudrate=115200, timeout=1)
+#     except:
+#         print("Erro na conexão da comunicação serial, é recomendado alterar a variável usb_com_port no config.py para None")
+#         exit()
 
 
 # - Fim do setup Serial - #
@@ -100,7 +100,7 @@ while True:
             deltax, deltay = optimized_svd_method(img_processed, img_processed_old, M, N, phase_windowing=config.phase_windowing)
             multiplied_deltax = config.deltax_multiplier * deltax
             multiplied_deltay = config.deltay_multiplier * deltay
-            atualizarPos(multiplied_deltax,multiplied_deltay)
+            # atualizarPos(multiplied_deltax,multiplied_deltay)
             total_deltax = total_deltax + (multiplied_deltax)
             total_deltay = total_deltay + (multiplied_deltay)
 
