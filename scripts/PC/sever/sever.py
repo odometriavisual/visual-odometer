@@ -53,7 +53,6 @@ counter = 0
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 vid.set(cv2.CAP_PROP_FOCUS, counter)
 
-
 # def atualizarPos(x,y):
 #     global resto_x, resto_y, arduino, intxacumulado, intyacumulado
 #
