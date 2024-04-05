@@ -4,6 +4,7 @@ import threading
 import os
 import time
 import datetime
+import webbrowser
 
 import sys
 import warnings
@@ -22,6 +23,11 @@ import config
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Obtém o diretório atual do arquivo Python
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# Caminho para o arquivo HTML
+html_file_path = os.path.join(dir_path, 'executar.html')
 
 resto_x = 0
 resto_y = 0
@@ -33,25 +39,30 @@ app = Flask(__name__)
 
 lock_quat = threading.Lock()
 printar = False
-lista_dados = []  #este é o Y
-lista_dados2 = []  #este é o X
+lista_dados = []  # este é o Y
+lista_dados2 = []  # este é o X
 
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-arquivo_dados = os.path.join(diretorio_atual, "dados.txt")
-
+data_dir = os.path.join(diretorio_atual, "data")
+files = os.listdir(data_dir)
+for file_name in files:
+    file_path = os.path.join(data_dir, file_name)
+    os.remove(file_path)
 
 from virtualencoder.visualodometry.score_focus import score_teng
+
 vid = cv2.VideoCapture(config.camera_id)
 camera_id = 0  # Altere o id da câmera aqui
 total_rec_time = 60  # seconds
 max_fps = 30  # Define o FPS máximo desejado
 camera_exposure = -6  # Defina exposição da câmera
 
-score_history = [0]*270
+score_history = [0] * 270
 counter = 0
 
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 vid.set(cv2.CAP_PROP_FOCUS, counter)
+
 
 # def atualizarPos(x,y):
 #     global resto_x, resto_y, arduino, intxacumulado, intyacumulado
@@ -118,11 +129,12 @@ def minha_thread():
 
         frame_num = -10  # Definido para negativo, o frame será contabilizado apenas após a décima imagem
 
-
-
         M = None
         N = None
         start_time = 0
+
+        # Abre o arquivo HTML no navegador padrão
+        webbrowser.open('file://' + html_file_path)
 
         while True:
             try:
@@ -142,7 +154,6 @@ def minha_thread():
                     # atualizarPos(multiplied_deltax,multiplied_deltay)
                     total_deltax = total_deltax + (multiplied_deltax)
                     total_deltay = total_deltay + (multiplied_deltay)
-
 
                     print(
                         f"Frame:  {frame_num:>3.2f}, delta:[{deltax:>5.2f},{deltay:>5.2f}], total_delta:[{total_deltax:>5.2f}, {total_deltay:>5.2f}]")
@@ -172,13 +183,16 @@ def minha_thread():
 
                 exit()
 
+
 def salvar_dados_arquivo():
     global lista_dados, lista_dados2
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
-    arquivo_dados = os.path.join(diretorio_atual, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
+    arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
     with open(arquivo_dados, "w") as arquivo:
         for x, y in zip(lista_dados, lista_dados2):
-            arquivo.write(f"{x} | {y}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
+            arquivo.write(
+                f"{x} | {y}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
+
 
 @app.route('/iniciar', methods=["GET", "POST"])
 def iniciar():
@@ -186,6 +200,7 @@ def iniciar():
 
     printar = True
     return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+
 
 @app.route('/finalizar', methods=["GET", "POST"])
 def finalizar():
@@ -202,7 +217,7 @@ def mostrar_dados():
     html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
 
     # Listar todos os arquivos .txt no diretório atual
-    arquivos_txt = [arquivo for arquivo in os.listdir(diretorio_atual) if arquivo.endswith(".txt")]
+    arquivos_txt = [arquivo for arquivo in os.listdir(data_dir) if arquivo.endswith(".txt")]
 
     # Criar botões para cada arquivo .txt
     for arquivo in arquivos_txt:
@@ -215,16 +230,31 @@ def mostrar_dados():
 @app.route('/abrir_arquivo/<nome_arquivo>', methods=["GET", "POST"])
 def abrir_arquivo(nome_arquivo):
     try:
-        arquivo_path = os.path.join(diretorio_atual, nome_arquivo)
+        arquivo_path = os.path.join(data_dir, nome_arquivo)
         if os.path.isfile(arquivo_path):
             with open(arquivo_path, "r") as arquivo:
                 conteudo = arquivo.read()
-            return f'<div style="white-space: pre-line;">{conteudo}</div>'
+            return f'<div style="white-space: pre-line;">{conteudo}<script>window.location.href = "http://localhost:5000/download/{nome_arquivo}"</script></div>'
         else:
-            abort(404)  # Retorna um erro 404 se o arquivo não existir
+            abort(
+                404)  # Retorna um erro 404 se o arquivo não existir  <form action="/download" method="post"><button type="submit" style="width: 150px; height: 50px;">download</button>
+
     except Exception as e:
 
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
+
+
+@app.route('/download/<nome_arquivo>', methods=["GET"])
+def download(nome_arquivo):
+    try:
+        arquivo_path = os.path.join(data_dir, nome_arquivo)
+        if os.path.isfile(arquivo_path):
+            return send_file(arquivo_path, as_attachment=True)
+        else:
+            abort(404)  # Retorna um erro 404 se o arquivo não existir
+    except Exception as e:
+        return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
+
 
 @app.route('/autofoco', methods=["GET", "POST"])
 def autofoco():
@@ -242,6 +272,7 @@ def autofoco():
 
     vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
     return f'<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">{np.argmax(score_history)}<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
+
 
 if __name__ == "__main__":
     thread_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
