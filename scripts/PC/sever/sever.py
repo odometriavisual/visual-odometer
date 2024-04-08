@@ -35,7 +35,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # Caminho para o arquivo HTML
 html_file_path = os.path.join(dir_path, 'executar.html')
 
-ports = serial.tools.list_ports.comports()
 
 
 app = Flask(__name__)
@@ -128,26 +127,23 @@ def minha_thread():
     intxacumulado = 0
     intyacumulado = 0
 
-    print("")
+    ports = serial.tools.list_ports.comports()
+
     for port in ports:
         print(port)
         if port.serial_number == "5698028262":
             print("Iniciando conecção com o modulo do giroscópio")
-            serial_giroscopio = serial.Serial(port=port.device, baudrate=9600, timeout=1)
+            serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
+            serial_giroscopio.setRTS(False)
             time.sleep(0.3)
             serial_giroscopio.setRTS(True)
             time.sleep(0.3)
             serial_giroscopio.setRTS(False)
             time.sleep(0.3)
-        else:
-            serial_encoder = serial.Serial(port=port.device, baudrate=115200, timeout=1)
-            time.sleep(0.3)
-            serial_encoder.setRTS(True)
-            time.sleep(0.3)
-            serial_encoder.setRTS(False)
-            time.sleep(0.3)
+        elif port.serial_number == "5698010135":
             print("Iniciando comunicação com o modulo pulsador")
-            time.sleep(0.6)
+            serial_encoder = serial.Serial(port=port.device, baudrate=115200, timeout=1)
+        print("TESTE")
 
     print("Testando comunicação serial: encoder")
     _ = serial_encoder.read()
