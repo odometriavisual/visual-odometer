@@ -14,22 +14,18 @@ def exitCode():
     ser.setRTS(False)
     exit()
 
-if config.usb_com_port is None:
-    serial_port_list = serial.tools.list_ports.comports()
-    port_list = sorted(serial_port_list)
-    print("Iniciando com serial")
-    ser = serial.Serial(port=port_list[0].device, baudrate=115200, timeout=1)
-    port_list.device()
+serial_port_list = serial.tools.list_ports.comports()
+port_list = sorted(serial_port_list)
+print("Iniciando com serial")
+ser = serial.Serial(port=port_list[0].device, baudrate=115200, timeout=1)
 
-    ser.setRTS(False)
-    time.sleep(0.5)
-    ser.setRTS(True)
-    time.sleep(0.5)
-    ser.setRTS(False)
-    ser.flush()
+time.sleep(2)
+ser.flush()
 
 while True:
     try:
+        time.sleep(1)
+        ser.write("10,10,10\r\n".encode())
         print(ser.readline().decode())
     except KeyboardInterrupt:
         exitCode()
