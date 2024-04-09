@@ -28,6 +28,8 @@ import serial.tools.list_ports
 
 import time
 
+from scipy.spatial.transform import Rotation as R
+
 
 # Obtém o diretório atual do arquivo Python
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -44,6 +46,7 @@ printar = False
 lista_dados = []  # este é o Y
 lista_dados2 = []  # este é o X
 lista_imu = []
+lista_3d = []
 
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(diretorio_atual, "data")
@@ -88,7 +91,7 @@ def serialSendEncoder(x, y):
     intx = int(x)
     inty = int(y)
 
-    text_to_send = f"0,{intx}, {inty} \n"
+    text_to_send = f"{intx},{inty},0\n"
     serial_encoder.write(text_to_send.encode())
 
     resto_x = x - intx
@@ -104,6 +107,7 @@ def minha_thread():
     global resto_x
     global resto_y
     global lista_imu
+    global lista_3d
     global intxacumulado
     global intyacumulado
     global serial_encoder
@@ -194,7 +198,7 @@ def minha_thread():
                 total_deltay = total_deltay + multiplied_deltay
 
                 # Exemplo de array para ser salvo:
-                array_to_save = [time.time(), gyroData, deltax, deltay]
+                array_to_save = [time.time(), gyroData, total_deltax, total_deltay]
                 print(array_to_save)
 
                 # salvando x e y para o web
@@ -203,12 +207,19 @@ def minha_thread():
                 totaly = round(total_deltay, 2)
                 totalx = round(total_deltax, 2)
 
+                r = R.from_quat([gyroData])
+                v = [totalx, totaly, 0]
+                ddd = r.apply(v)
+
                 lock_quat.acquire()
                 if printar:
                     lista_dados2.append(totalx)
                     lista_dados.append(totaly)
                     lista_imu.append(gyroData)
+                    lista_3d.append(ddd)
                 lock_quat.release()
+
+
 
             frame_num = frame_num + 1
             img_processed_old = img_processed
@@ -244,7 +255,7 @@ def minha_thread():
 
 
 def salvar_dados_arquivo():
-    global lista_dados, lista_dados2, lista_imu
+    global lista_dados, lista_dados2
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
     with open(arquivo_dados, "w") as arquivo:
@@ -264,9 +275,12 @@ def iniciar():
 def finalizar():
     print("teste")
     global printar
-    global lista_dados
+    global lista_dados, lista_dados2, lista_imu, lista_3d
     salvar_dados_arquivo()
     lista_dados = []  # Limpa a lista após salvar os dados
+    lista_dados2 = []
+    lista_imu = []
+    lista_3d = []
     printar = False
     return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
 
