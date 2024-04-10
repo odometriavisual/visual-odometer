@@ -34,6 +34,22 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
+# Configurações de câmera
+camera_id = 0           # Defina o id da câmera
+camera_exposure = None   # Defina exposição da câmera
+
+# Multiplicadores de deslocamento
+deltax_multiplier = 1 # Defina o multiplicador de deslocamento X
+deltay_multiplier = 1 # Defina o multiplicador de deslocamento Y
+
+# Configuração de comunicação Serial
+usb_com_port = None  # Configure a porta de comunicação serial (Padrão: None, Valores Possíveis: String, Exemplo: "COM4")
+
+# Configurações de estimativa
+border_windowing_method = "blackman_harris"  # Aplica o escurecimento nas bordas das imagens
+phase_windowing = None                       # Aplica o janelamento no sinal final da fase
+# ----- Configuração de comunicação Serial ----- #
+
 
 # Obtém o diretório atual do arquivo Python
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -62,7 +78,7 @@ for file_name in files:
 
 from virtualencoder.visualodometry.score_focus import score_teng
 
-vid = cv2.VideoCapture(config.camera_id)
+vid = cv2.VideoCapture(camera_id)
 camera_id = 0  # Altere o id da câmera aqui
 total_rec_time = 60  # seconds
 max_fps = 30  # Define o FPS máximo desejado
@@ -74,11 +90,24 @@ counter = 0
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 vid.set(cv2.CAP_PROP_FOCUS, counter)
 
-serial_encoder = 0
+serial_pulsador = 0
 
 gyroData = [0,0,0,0]
 
 # --- Funções reservadas para envio e armazenamento de dados --- #
+
+def endSerialComunication():
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(True)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(True)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
 
 def checkSerialInput():
     global gyroData, serial_giroscopio
@@ -88,7 +117,7 @@ def checkSerialInput():
         serial_giroscopio.flush()
 
 def serialSendEncoder(x, y):
-    global resto_x, resto_y, serial_encoder, intxacumulado, intyacumulado, serial_encoder
+    global resto_x, resto_y, serial_pulsador, intxacumulado, intyacumulado, serial_pulsador
 
     x += resto_x
     y += resto_y
@@ -97,14 +126,11 @@ def serialSendEncoder(x, y):
     inty = int(y)
 
     text_to_send = f"{intx},{inty},0\n"
-    serial_encoder.write(text_to_send.encode())
+    serial_pulsador.write(text_to_send.encode())
 
     resto_x = x - intx
     resto_y = y - inty
 
-# ----- Configuração de comunicação Serial ----- #
-
-#Comentado para remover dados seriais
 
 def minha_thread():
     global printar
@@ -115,7 +141,7 @@ def minha_thread():
     global lista_3d
     global intxacumulado
     global intyacumulado
-    global serial_encoder
+    global serial_pulsador
     global serial_giroscopio
 
     totalx = 0
@@ -140,7 +166,7 @@ def minha_thread():
 
     for port in ports:
         print(port)
-        if port.serial_number == "5698028262":
+        if port.serial_number == "56CA000930":
             print("Iniciando conecção com o modulo do giroscópio")
             serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_giroscopio.setRTS(False)
@@ -151,11 +177,16 @@ def minha_thread():
             time.sleep(0.3)
         elif port.serial_number == "5698010135":
             print("Iniciando comunicação com o modulo pulsador")
-            serial_encoder = serial.Serial(port=port.device, baudrate=115200, timeout=1)
-        print("TESTE")
+            serial_pulsador = serial.Serial(port=port.device, baudrate=115200, timeout=1)
+            serial_pulsador.setRTS(False)
+            time.sleep(0.3)
+            serial_pulsador.setRTS(True)
+            time.sleep(0.3)
+            serial_pulsador.setRTS(False)
+            time.sleep(0.3)
 
     print("Testando comunicação serial: encoder")
-    _ = serial_encoder.read()
+    _ = serial_pulsador.read()
     print("Testando comunicação serial: giroscópio server")
     _ = serial_giroscopio.read()
     print("Comunicação serial OK")
@@ -164,13 +195,13 @@ def minha_thread():
     # -- Inicio da configuração da câmera --- #
 
     print('Pegando acesso a camera, isso pode demorar um pouco...')
-    vid = cv2.VideoCapture(config.camera_id)
+    vid = cv2.VideoCapture(camera_id)
 
     ret, frame = vid.read()
     img_array = cv2_to_nparray_grayscale(frame)
-    if config.camera_exposure != None:
+    if camera_exposure != None:
         print("Definindo exposição da câmera")
-        vid.set(cv2.CAP_PROP_EXPOSURE, config.camera_exposure)
+        vid.set(cv2.CAP_PROP_EXPOSURE, camera_exposure)
 
     # Abre o arquivo HTML no navegador padrão
     webbrowser.open('file://' + html_file_path)
@@ -183,7 +214,7 @@ def minha_thread():
 
             ret, frame = vid.read()
             img_array = cv2_to_nparray_grayscale(frame)
-            img_windowed = apply_border_windowing_on_image(img_array, config.border_windowing_method)
+            img_windowed = apply_border_windowing_on_image(img_array, border_windowing_method)
             img_processed = image_preprocessing(img_array)
             if frame_num > 0:
                 if (M == None):
@@ -191,9 +222,9 @@ def minha_thread():
                     start_time = time.time()
                     M, N = img_array.shape
                 deltax, deltay = optimized_svd_method(img_processed, img_processed_old, M, N,
-                                                      phase_windowing=config.phase_windowing)
-                multiplied_deltax = config.deltax_multiplier * deltax
-                multiplied_deltay = config.deltay_multiplier * deltay
+                                                      phase_windowing=phase_windowing)
+                multiplied_deltax = deltax_multiplier * deltax
+                multiplied_deltay = deltay_multiplier * deltay
 
                 # Comentado para remover serial
                 serialSendEncoder(multiplied_deltax,
@@ -231,16 +262,7 @@ def minha_thread():
 
         except KeyboardInterrupt:
 
-            # Fechando portas Seriais
-            serial_giroscopio.setRTS(True)
-            serial_encoder.setRTS(True)
-            time.sleep(0.3)
-            serial_giroscopio.setRTS(False)
-            serial_encoder.setRTS(False)
-            time.sleep(0.3)
-            serial_giroscopio.close()
-            serial_encoder.close()
-            # -----------------------#
+            endSerialComunication()
 
             vid.release()
 
@@ -276,13 +298,11 @@ def iniciar():
     printar = True
     return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/3D" method="post"><button type="submit" style="width: 150px; height: 50px;">3D</button></form><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
 
-@app.route('/3D', methods=["GET", "POST"])
+@app.route('/3D')
 def vizu3d():
     global lista_3d
     # Dados
-    dados = np.array([[1, 2, 3],
-                      [4, 5, 6],
-                      [7, 8, 9]])
+    dados = np.array(lista_3d)
 
     # Extrair valores x, y, z do vetor
     x = dados[:, 0]
