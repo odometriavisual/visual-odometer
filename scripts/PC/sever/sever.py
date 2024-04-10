@@ -1,4 +1,4 @@
-from flask import Flask, send_file, abort
+from flask import Flask, send_file, abort, render_template
 import concurrent.futures
 import threading
 import os
@@ -30,6 +30,10 @@ import time
 
 from scipy.spatial.transform import Rotation as R
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+
 
 # Obtém o diretório atual do arquivo Python
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -40,6 +44,7 @@ html_file_path = os.path.join(dir_path, 'executar.html')
 
 
 app = Flask(__name__)
+app.template_folder = ''
 
 lock_quat = threading.Lock()
 printar = False
@@ -255,7 +260,7 @@ def minha_thread():
 
 
 def salvar_dados_arquivo():
-    global lista_dados, lista_dados2
+    global lista_dados, lista_dados2, lista_imu
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
     with open(arquivo_dados, "w") as arquivo:
@@ -269,7 +274,24 @@ def iniciar():
     global printar
 
     printar = True
-    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/3D" method="post"><button type="submit" style="width: 150px; height: 50px;">3D</button></form><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+
+@app.route('/3D', methods=["GET", "POST"])
+def vizu3d():
+    global lista_3d
+    # Dados
+    dados = np.array([[1, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9]])
+
+    # Extrair valores x, y, z do vetor
+    x = dados[:, 0]
+    y = dados[:, 1]
+    z = dados[:, 2]
+
+    # Passar os dados para o template HTML
+    return render_template('index.html', x=x.tolist(), y=y.tolist(), z=z.tolist())
+
 
 @app.route('/finalizar', methods=["GET", "POST"])
 def finalizar():
