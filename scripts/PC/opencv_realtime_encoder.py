@@ -4,6 +4,7 @@ import warnings
 
 sys.path.insert(0, r'C:\Users\Panther\PycharmProjects\virtualencoder')
 
+w = "..\pasta"
 import cv2
 import serial.tools.list_ports
 
@@ -20,65 +21,81 @@ resto_y = 0
 intxacumulado = 0
 intyacumulado = 0
 
-# def atualizarPos(x,y):
-#     global resto_x, resto_y, arduino, intxacumulado, intyacumulado
-#
-#     x += resto_x
-#     y += resto_y
-#
-#     intx = int(x)
-#     inty = int(y)
-#
-#     text_to_send = f"0,{intx}, {inty} \n"
-#     arduino.write(text_to_send.encode())
-#     #_ = arduino.readline()
-#
-#     resto_x = x - intx
-#     resto_y = y - inty
-#
-# if config.usb_com_port is None:
-#     try:
-#         print("Iniciando setup automático de comunicação Serial")
-#         serial_port_list = serial.tools.list_ports.comports()
-#         serial_port_list_size = len(serial_port_list)
-#         if (serial_port_list_size == 0):
-#             print ("Não foi detectado nenhuma comunicação serial compatível")
-#         elif (serial_port_list_size > 1):
-#             warnings.warn("ATENÇÃO - Foram encontradas mais de uma porta serial, o código exercutaa apenas com uma delas")
-#         selected_port = sorted(serial_port_list)[0]
-#         arduino = serial.Serial(port=selected_port.name, baudrate=115200, timeout=1)
-#         state = arduino.read()
-#         print(f"Porta {selected_port.name} conectada")
-#     except:
-#         print("Erro na conexão da comunicação serial, verifique se o encoder está conectado")
-#         exit()
-# else:
-#     try:
-#         arduino = serial.Serial(port=config.usb_com_port, baudrate=115200, timeout=1)
-#     except:
-#         print("Erro na conexão da comunicação serial, é recomendado alterar a variável usb_com_port no config.py para None")
-#         exit()
+gyroData = [0,0,0,0]
+def atualizarPos(x,y):
+    global resto_x, resto_y, serial_pulsador, intxacumulado, intyacumulado
+
+    x += resto_x
+    y += resto_y
+
+    intx = int(x)
+    inty = int(y)
+
+    text_to_send = f"{intx},{inty},0\r\n"
+    serial_pulsador.write(text_to_send.encode())
+    #_ = arduino.readline()
+
+    resto_x = x - intx
+    resto_y = y - inty
+
+def checkSerialInput():
+    global gyroData, serial_giroscopio
+    while (serial_giroscopio.in_waiting > 0):
+        ser_line = serial_giroscopio.readline().decode()
+        gyroData = [float(x) for x in ser_line.split(",")] #list  quaternium to biallhole
+        serial_giroscopio.flush()
+
+def endSerialComunication():
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(True)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(True)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
+
+ports = serial.tools.list_ports.comports()
+for port in ports:
+    print(port)
+    if port.serial_number == "56CA000930":
+        print("Iniciando conecção com o modulo do giroscópio")
+        serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
+        serial_giroscopio.setRTS(False)
+        time.sleep(0.3)
+        serial_giroscopio.setRTS(True)
+        time.sleep(0.3)
+        serial_giroscopio.setRTS(False)
+        time.sleep(0.3)
+    elif port.serial_number == "5698010135":
+        print("Iniciando comunicação com o modulo pulsador")
+        serial_pulsador = serial.Serial(port=port.device, baudrate=115200, timeout=1)
+        serial_pulsador.setRTS(False)
+        time.sleep(0.3)
+        serial_pulsador.setRTS(True)
+        time.sleep(0.3)
+        serial_pulsador.setRTS(False)
+        time.sleep(0.3)
 
 
 # - Fim do setup Serial - #
 
 print('Pegando acesso a camera, isso pode demorar um pouco...')
 vid = cv2.VideoCapture(config.camera_id)
-
-
 try:
     ret, frame = vid.read()
     img_array = cv2_to_nparray_grayscale(frame)
 except:
     print("Não foi possível conectar a câmera, altere o id da camera no config.py")
     exit()
-
 if config.camera_exposure != None:
     print("Definindo exposição da câmera")
     vid.set(cv2.CAP_PROP_EXPOSURE, config.camera_exposure)
 
 frame_num = -10 #Definido para negativo, o frame será contabilizado apenas após a décima imagem
-
 total_deltax = 0
 total_deltay = 0
 
@@ -88,6 +105,7 @@ start_time = 0
 
 while True:
     try:
+        checkSerialInput()
         ret, frame = vid.read()
         img_array = cv2_to_nparray_grayscale(frame)
         img_windowed = apply_border_windowing_on_image(img_array, config.border_windowing_method)
@@ -100,17 +118,16 @@ while True:
             deltax, deltay = optimized_svd_method(img_processed, img_processed_old, M, N, phase_windowing=config.phase_windowing)
             multiplied_deltax = config.deltax_multiplier * deltax
             multiplied_deltay = config.deltay_multiplier * deltay
-            # atualizarPos(multiplied_deltax,multiplied_deltay)
+            atualizarPos(multiplied_deltax,multiplied_deltay)
             total_deltax = total_deltax + (multiplied_deltax)
             total_deltay = total_deltay + (multiplied_deltay)
 
-
-            print(f"Frame:  {frame_num:>3.2f}, delta:[{deltax:>5.2f},{deltay:>5.2f}], total_delta:[{total_deltax:>5.2f}, {total_deltay:>5.2f}]")
-
+            print(f"Frame:  {frame_num:>3.2f}, delta:[{deltax:>5.2f},{deltay:>5.2f}], total_delta:[{total_deltax:>5.2f}, {total_deltay:>5.2f}, {gyroData}]")
 
         frame_num = frame_num + 1
         img_processed_old = img_processed
-    except KeyboardInterrupt:
+    except:
+        endSerialComunication()
         vid.release()
 
         passed_time = (time.time() - start_time)
