@@ -25,8 +25,12 @@ import serial
 
 import scipy
 
+from flask import Flask, render_template
+import numpy as np
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 #from mpl_toolkits.mplot3d import Axes3D
 
 # Imports das bibliotecas necessarias para as bibliotecas
@@ -486,7 +490,7 @@ def score_mlog(img):
 
 # Configurações de câmera
 camera_id = 0           # Defina o id da câmera
-camera_exposure = None   # Defina exposição da câmera
+camera_exposure = -13   # Defina exposição da câmera
 
 # Multiplicadores de deslocamento
 deltax_multiplier = 1 # Defina o multiplicador de deslocamento X
@@ -522,11 +526,26 @@ lista_3d = []
 
 
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(diretorio_atual, "data")
-files = os.listdir(data_dir)
-for file_name in files:
-    file_path = os.path.join(data_dir, file_name)
-    os.remove(file_path)
+diretorio_atual = os.getcwd()
+
+
+
+data_dir = os.path.join(diretorio_atual, 'data')
+
+# Verifica se o diretório "data" existe
+if os.path.isdir(data_dir):
+    files = os.listdir(data_dir)
+    for file_name in files:
+        file_path = os.path.join(data_dir, file_name)
+        os.remove(file_path)
+    os.rmdir(data_dir)
+    os.mkdir(data_dir)
+else:
+    os.mkdir(data_dir)
+
+
+
+
 
 #from virtualencoder.visualodometry.score_focus import score_teng
 
@@ -618,7 +637,7 @@ def minha_thread():
 
     for port in ports:
         print(port)
-        if port.serial_number == "56CA000930":
+        if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "562B012552":
             print("Iniciando conecção com o modulo do giroscópio")
             serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_giroscopio.setRTS(False)
@@ -627,7 +646,7 @@ def minha_thread():
             time.sleep(0.3)
             serial_giroscopio.setRTS(False)
             time.sleep(0.3)
-        elif port.serial_number == "5698010135":
+        elif port.serial_number == "5698010135" or port.serial_number == "5698028262":
             print("Iniciando comunicação com o modulo pulsador")
             serial_pulsador = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_pulsador.setRTS(False)
@@ -700,6 +719,7 @@ def minha_thread():
                 r = scipy.spatial.transform.Rotation.from_quat([gyroData])
                 v = [totalx, totaly, 0]
                 ddd = r.apply(v)
+                ## alterar a forma que o ddd esta gerando os dados para a analise de deslocamento ser mais rapida
 
                 lock_quat.acquire()
                 if printar:
@@ -736,12 +756,12 @@ def minha_thread():
 
 
 def salvar_dados_arquivo():
-    global lista_dados, lista_dados2, lista_imu
+    global lista_dados, lista_dados2, lista_imu,lista_3d
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
     print(arquivo_dados)
     with open(arquivo_dados, "w") as arquivo:
-        for x, y, z in zip(lista_dados, lista_dados2, lista_imu):
+        for x, y, z in zip(lista_dados, lista_dados2, lista_3d):
             arquivo.write(
                 f"{x}|{y}|{z}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
 
@@ -751,21 +771,22 @@ def iniciar():
     global printar
 
     printar = True
-    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/3D" method="post"><button type="submit" style="width: 150px; height: 50px;">3D</button></form><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+
 
 @app.route('/3D')
 def vizu3d():
-    global lista_3d
+
     # Dados
-    dados = np.array(lista_3d)
+    dados = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]  # Corrigido para representar três pontos
 
     # Extrair valores x, y, z do vetor
-    x = dados[:, 0]
-    y = dados[:, 1]
-    z = dados[:, 2]
+    x = [ponto[0] for ponto in dados]
+    y = [ponto[1] for ponto in dados]
+    z = [ponto[2] for ponto in dados]
 
     # Passar os dados para o template HTML
-    return flask.render_template('index.html', x=x.tolist(), y=y.tolist(), z=z.tolist())
+    return render_template('index.html', x=x, y=y, z=z)
 
 
 @app.route('/finalizar', methods=["GET", "POST"])
