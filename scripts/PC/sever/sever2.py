@@ -2,7 +2,7 @@ import datetime
 import sys
 import time
 import warnings
-import numpy as np
+
 import cv2
 import numpy
 
@@ -15,6 +15,7 @@ import flask
 import concurrent.futures
 import threading
 import os
+import json, os, signal
 
 import webbrowser
 
@@ -28,8 +29,8 @@ import scipy
 from flask import Flask, render_template
 import numpy as np
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import plotly.graph_objs as go
+
 
 #from mpl_toolkits.mplot3d import Axes3D
 
@@ -60,6 +61,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # imports dsp_utils.py
 sys.path.extend([os.path.dirname(os.path.realpath(__file__))])
+cont = True
 def ideal_lowpass(I, factor=0.6, method='Stone_et_al_2001'):
     if method == 'Stone_et_al_2001':
         m = factor * I.shape[0]/2
@@ -522,7 +524,7 @@ lista_dados = []  # este é o Y
 lista_dados2 = []  # este é o X
 lista_imu = []
 lista_3d = []
-
+all_points_3d = []
 
 
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
@@ -567,19 +569,6 @@ gyroData = [0,0,0,0]
 
 # --- Funções reservadas para envio e armazenamento de dados --- #
 
-def endSerialComunication():
-    serial_giroscopio.setRTS(False)
-    time.sleep(0.3)
-    serial_giroscopio.setRTS(True)
-    time.sleep(0.3)
-    serial_giroscopio.setRTS(False)
-    time.sleep(0.3)
-    serial_pulsador.setRTS(False)
-    time.sleep(0.3)
-    serial_pulsador.setRTS(True)
-    time.sleep(0.3)
-    serial_pulsador.setRTS(False)
-
 def checkSerialInput():
     global gyroData, serial_giroscopio
     if (serial_giroscopio.in_waiting > 0):
@@ -602,6 +591,13 @@ def serialSendEncoder(x, y):
     resto_x = x - intx
     resto_y = y - inty
 
+def quaternion_to_rotation_matrix(q):
+    w, x, y, z = q
+    return np.array([
+        [1 - 2*y**2 - 2*z**2, 2*x*y - 2*z*w, 2*x*z + 2*y*w],
+        [2*x*y + 2*z*w, 1 - 2*x**2 - 2*z**2, 2*y*z - 2*x*w],
+        [2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x**2 - 2*y**2]
+    ])
 
 def minha_thread():
     global printar
@@ -614,6 +610,10 @@ def minha_thread():
     global intyacumulado
     global serial_pulsador
     global serial_giroscopio
+    global ddd
+    global cont
+    global all_points_3d
+    global final_3d
 
     totalx = 0
     totaly = 0
@@ -634,7 +634,7 @@ def minha_thread():
     intyacumulado = 0
 
     ports = serial.tools.list_ports.comports()
-
+    print("ports = ", ports)
     for port in ports:
         print(port)
         if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "562B012552":
@@ -679,10 +679,13 @@ def minha_thread():
 
     webbrowser.open(html_file_path)
 
-
-    while True:
+    print("antes do loop")
+    print("cont = ", cont)
+    i = 0
+    while cont:
         try:
             # Comentado para remover serial
+            print("checkSerialInput()")
             checkSerialInput()
 
             ret, frame = vid.read()
@@ -706,6 +709,9 @@ def minha_thread():
                 total_deltax = total_deltax + multiplied_deltax
                 total_deltay = total_deltay + multiplied_deltay
 
+
+
+
                 # Exemplo de array para ser salvo:
                 array_to_save = [time.time(), gyroData, total_deltax, total_deltay]
                 print(array_to_save)
@@ -716,17 +722,29 @@ def minha_thread():
                 totaly = round(total_deltay, 2)
                 totalx = round(total_deltax, 2)
 
+                rotation_matrix = quaternion_to_rotation_matrix(gyroData)
+                point_3d = np.dot(rotation_matrix, [totaly, totalx, 0])
+
                 r = scipy.spatial.transform.Rotation.from_quat([gyroData])
                 v = [totalx, totaly, 0]
                 ddd = r.apply(v)
                 ## alterar a forma que o ddd esta gerando os dados para a analise de deslocamento ser mais rapida
+                print(point_3d)
+
 
                 lock_quat.acquire()
                 if printar:
                     lista_dados2.append(totalx)
                     lista_dados.append(totaly)
                     lista_imu.append(gyroData)
+                    all_points_3d.append(point_3d)
+                    final_3d = [list(arr) for arr in all_points_3d]
+                    print(all_points_3d)
+                    print(final_3d)
+
+
                     lista_3d.append(ddd)
+
                 lock_quat.release()
 
 
@@ -735,9 +753,6 @@ def minha_thread():
             img_processed_old = img_processed
 
         except KeyboardInterrupt:
-
-            endSerialComunication()
-
             vid.release()
 
             passed_time = (time.time() - start_time)
@@ -753,10 +768,23 @@ def minha_thread():
             exit()
         except Exception as exc:
             print("Erro:", exc)
+        i += 1
+        print('i = ', i)
+        # if i > 50:
+        #     break
+    print("aqui")
+    return ""
 
 
 def salvar_dados_arquivo():
-    global lista_dados, lista_dados2, lista_imu,lista_3d
+    global lista_dados, lista_dados2, lista_imu, lista_3d, ddd
+    print(ddd)
+    print("ddd:")
+    print(lista_3d)
+    print("lista_3d:")
+    dados_lista = [arr.tolist() for arr in lista_3d]
+    print(dados_lista)
+
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
     print(arquivo_dados)
@@ -765,29 +793,53 @@ def salvar_dados_arquivo():
             arquivo.write(
                 f"{x}|{y}|{z}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
 
-
 @app.route('/iniciar', methods=["GET", "POST"])
 def iniciar():
     global printar
 
     printar = True
-    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
-
+    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><a href="/3D"><button style="width: 150px; height: 50px;background;">3D</button></a><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
 
 @app.route('/3D')
 def vizu3d():
+    global final_3d
 
-    # Dados
-    dados = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]  # Corrigido para representar três pontos
+    # Dados para o gráfico 3D
+    data = [[-0.00451, -0.090264, -0.00571],
+            [-0.016364, -0.06096, -0.004364],
+            [-0.00757, -0.040444, -0.00277],
+            [0.012466, -0.039268, -0.001934]]
 
-    # Extrair valores x, y, z do vetor
-    x = [ponto[0] for ponto in dados]
-    y = [ponto[1] for ponto in dados]
-    z = [ponto[2] for ponto in dados]
+    # Criar um gráfico de dispersão 3D
+    trace = go.Scatter3d(
+        x=[point[0] for point in final_3d],
+        y=[point[1] for point in final_3d],
+        z=[point[2] for point in final_3d],
+        mode='markers',
+        marker=dict(
+            size=12,
+            color='blue',
+            opacity=0.8
+        )
+    )
 
-    # Passar os dados para o template HTML
-    return render_template('index.html', x=x, y=y, z=z)
+    # Layout do gráfico
+    layout = go.Layout(
+        scene=dict(
+            xaxis=dict(title='X'),
+            yaxis=dict(title='Y'),
+            zaxis=dict(title='Z')
+        )
+    )
 
+    # Criar a figura do gráfico
+    fig = go.Figure(data=[trace], layout=layout)
+
+    # Converter a figura para HTML
+    graph_html = fig.to_html(full_html=False)
+
+    # Renderizar o template HTML com o gráfico
+    return render_template('3d_visualization.html', graph_html=graph_html)
 
 @app.route('/finalizar', methods=["GET", "POST"])
 def finalizar():
@@ -802,7 +854,6 @@ def finalizar():
     printar = False
     return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
 
-
 @app.route('/dados', methods=["GET", "POST"])
 def mostrar_dados():
     html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
@@ -814,9 +865,8 @@ def mostrar_dados():
     for arquivo in arquivos_txt:
         html += f'<form action="/abrir_arquivo/{arquivo}" method="post"><button type="submit" style="width: 150px; height: 50px;">{arquivo}</button></form>'
 
-    html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form></div>'
+    html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">finish prog</button></form></div>'
     return html
-
 
 @app.route('/abrir_arquivo/<nome_arquivo>', methods=["GET", "POST"])
 def abrir_arquivo(nome_arquivo):
@@ -834,7 +884,6 @@ def abrir_arquivo(nome_arquivo):
 
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
 
-
 @app.route('/download/<nome_arquivo>', methods=["GET"])
 def download(nome_arquivo):
     try:
@@ -845,7 +894,6 @@ def download(nome_arquivo):
             flask.abort(404)  # Retorna um erro 404 se o arquivo não existir
     except Exception as e:
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
-
 
 @app.route('/autofoco', methods=["GET", "POST"])
 def autofoco():
@@ -864,8 +912,30 @@ def autofoco():
     vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
     return f'<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">{np.argmax(score_history)}<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
 
+@app.route('/parar', methods=["GET", "POST"])
+def parar():
+    global cont
+
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(True)
+    time.sleep(0.3)
+    serial_giroscopio.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(True)
+    time.sleep(0.3)
+    serial_pulsador.setRTS(False)
+
+    cont = False
+    os.kill(os.getpid(), signal.SIGINT)
+
+    return "Finished"
 
 if __name__ == "__main__":
-    thread_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    thread_executor.submit(minha_thread)
+    thread = threading.Thread(target=minha_thread)
+    thread.start()
     app.run(host="127.0.0.1", port=5000)
+    thread.join()
+
