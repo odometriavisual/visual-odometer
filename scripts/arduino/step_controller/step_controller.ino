@@ -1,38 +1,20 @@
-#define DIR_PIN 3
-#define STEP_PIN 4
-#define END_GATE_PIN 10
+#define DIR_PIN 4
+#define STEP_PIN 5
 
 int steps_per_second = 100; 
 int current_position = 0;
 int step_direction = 1;
 int target_position = 0;
-unsigned long last_step_time = 0;
-unsigned long step_interval = 1000/steps_per_second;
+float last_step_time = 0;
+float step_interval = 1000/steps_per_second;
 bool is_moving = false;
 
 
 void setup() {
   pinMode(DIR_PIN, OUTPUT);
   pinMode(STEP_PIN, OUTPUT);
-  pinMode(END_GATE_PIN, INPUT_PULLUP);
   Serial.begin(115200);
   digitalWrite(DIR_PIN, HIGH);
-  while(digitalRead(END_GATE_PIN) == 0){
-      delayMicroseconds(5000);
-      digitalWrite(STEP_PIN, HIGH);
-      delayMicroseconds(2); 
-      digitalWrite(STEP_PIN, LOW);
-  }
-
-  digitalWrite(DIR_PIN, LOW);
-  for (int i = 0; i <= 50; i++) {
-      delayMicroseconds(5000);
-      digitalWrite(STEP_PIN, HIGH);
-      delayMicroseconds(2); 
-      digitalWrite(STEP_PIN, LOW);
-  }
-  delay(1);
-  Serial.println(".");
 }
 
 void loop() {
@@ -40,10 +22,17 @@ void loop() {
     String incoming_text = Serial.readStringUntil('\n');
     char *token = strtok(const_cast<char*>(incoming_text.c_str()), ",");
     if (token != NULL) {
-      target_position = atoi(token); 
+      target_position = atoi(token);
       token = strtok(NULL, ",");
       if (token != NULL) {
-        step_interval = 1000/atoi(token);
+        //Serial.print("Token: ");
+        //Serial.println(token);
+        //Serial.print("ATOF TOKEN: ");
+        //Serial.println(atof(token));
+        //Serial.print("Step: ");
+
+        step_interval = 1000000/atof(token);
+        //Serial.println(step_interval);
       }
     }
     if (target_position - current_position > 0) {
@@ -56,29 +45,19 @@ void loop() {
       is_moving = true;
     }
   }
-
-  if (current_position != target_position) {
-    unsigned long current_time = millis();
-    if (current_time - last_step_time >= step_interval) {
-      digitalWrite(STEP_PIN, HIGH);
-      delayMicroseconds(2); 
-      digitalWrite(STEP_PIN, LOW);
-      last_step_time = current_time;
-      current_position = current_position + step_direction;
-    }
-  } else if (is_moving == true) {
-    Serial.println(".");
-    is_moving = false;
-  }
-  if(digitalRead(END_GATE_PIN)){
-    digitalWrite(DIR_PIN, LOW);
-    for (int i = 0; i <= 50; i++) {
-        delayMicroseconds(5000);
+  while (is_moving == true){
+    if (current_position != target_position) {
+      float current_time = micros();
+      if (current_time - last_step_time >= step_interval) {
         digitalWrite(STEP_PIN, HIGH);
-        delayMicroseconds(2); 
         digitalWrite(STEP_PIN, LOW);
+        last_step_time = current_time;
+        current_position = current_position + step_direction;
+      }
+    } else if (is_moving == true) {
+      Serial.println(".");
+      is_moving = false;
     }
-    exit(0);
   }
 }
 
