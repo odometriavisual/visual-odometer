@@ -32,6 +32,8 @@ import numpy as np
 import plotly.graph_objs as go
 
 
+
+
 #from mpl_toolkits.mplot3d import Axes3D
 
 # Imports das bibliotecas necessarias para as bibliotecas
@@ -492,7 +494,7 @@ def score_mlog(img):
 
 # Configurações de câmera
 camera_id = 0           # Defina o id da câmera
-camera_exposure = -13   # Defina exposição da câmera
+camera_exposure = -11   # Defina exposição da câmera
 
 # Multiplicadores de deslocamento
 deltax_multiplier = 1 # Defina o multiplicador de deslocamento X
@@ -525,7 +527,7 @@ lista_dados2 = []  # este é o X
 lista_imu = []
 lista_3d = []
 all_points_3d = []
-
+all_points_2d = []
 
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 diretorio_atual = os.getcwd()
@@ -552,10 +554,8 @@ else:
 #from virtualencoder.visualodometry.score_focus import score_teng
 
 vid = cv2.VideoCapture(camera_id)
-camera_id = 0  # Altere o id da câmera aqui
 total_rec_time = 60  # seconds
 max_fps = 30  # Define o FPS máximo desejado
-camera_exposure = -6  # Defina exposição da câmera
 
 score_history = [0] * 270
 counter = 0
@@ -566,15 +566,35 @@ vid.set(cv2.CAP_PROP_FOCUS, counter)
 serial_pulsador = 0
 
 gyroData = [0,0,0,0]
+glob_quat = [0, 1, 0, 0]
+counter = 0
+offset = None
 
 # --- Funções reservadas para envio e armazenamento de dados --- #
 
-def checkSerialInput():
-    global gyroData, serial_giroscopio
+def quaternion_multiply(quaternion1, quaternion0):
+    w0, x0, y0, z0 = quaternion0
+    w1, x1, y1, z1 = quaternion1
+    return np.array([-x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
+                     x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
+                     -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
+                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0], dtype=np.float64)
+
+def checkSerialInput(first_time = False):
+    global gyroData, serial_giroscopio, offset
     if (serial_giroscopio.in_waiting > 0):
         ser_line = serial_giroscopio.readline().decode()
         gyroData = [float(x) for x in ser_line.split(",")] #list  quaternium to biallhole
-        serial_giroscopio.flush()
+        gyroData = [gyroData[0], gyroData[1], gyroData[2], gyroData[3]]
+        serial_giroscopio.read_all()
+
+        #if first_time is True:
+            #quat_first = [quat[0], -quat[1], -quat[2], -quat[3]]
+            #offset = quaternion_multiply(glob_quat, quat_first)
+
+        # = quaternion_multiply(offset, quat)
+
+
 
 def serialSendEncoder(x, y):
     global resto_x, resto_y, serial_pulsador, intxacumulado, intyacumulado, serial_pulsador
@@ -599,6 +619,7 @@ def quaternion_to_rotation_matrix(q):
         [2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x**2 - 2*y**2]
     ])
 
+
 def minha_thread():
     global printar
     global vid
@@ -613,6 +634,7 @@ def minha_thread():
     global ddd
     global cont
     global all_points_3d
+    global all_points_2d
     global final_3d
 
     totalx = 0
@@ -637,7 +659,7 @@ def minha_thread():
     print("ports = ", ports)
     for port in ports:
         print(port)
-        if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "562B012552":
+        if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "5698011281" or port.serial_number == "5767002927":
             print("Iniciando conecção com o modulo do giroscópio")
             serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_giroscopio.setRTS(False)
@@ -646,7 +668,7 @@ def minha_thread():
             time.sleep(0.3)
             serial_giroscopio.setRTS(False)
             time.sleep(0.3)
-        elif port.serial_number == "5698010135" or port.serial_number == "5698028262":
+        elif port.serial_number == "5767003473":
             print("Iniciando comunicação com o modulo pulsador")
             serial_pulsador = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_pulsador.setRTS(False)
@@ -668,8 +690,7 @@ def minha_thread():
     print('Pegando acesso a camera, isso pode demorar um pouco...')
     ##vid = cv2.VideoCapture(camera_id)
 
-    ret, frame = vid.read()
-    img_array = cv2_to_nparray_grayscale(frame)
+
     if camera_exposure != None:
         print("Definindo exposição da câmera")
         vid.set(cv2.CAP_PROP_EXPOSURE, camera_exposure)
@@ -679,14 +700,25 @@ def minha_thread():
 
     webbrowser.open(html_file_path)
 
-    print("antes do loop")
+
     print("cont = ", cont)
     i = 0
+
+
+
+
+
+
+    first_time = True
+    point_3d = np.zeros(shape=3)
+    point_2d = np.zeros(shape=3)
+    print("antes do loop")
     while cont:
         try:
             # Comentado para remover serial
-            print("checkSerialInput()")
-            checkSerialInput()
+            # print("checkSerialInput()")
+            checkSerialInput(first_time)
+            first_time = False
 
             ret, frame = vid.read()
             img_array = cv2_to_nparray_grayscale(frame)
@@ -702,6 +734,7 @@ def minha_thread():
                 multiplied_deltax = deltax_multiplier * deltax
                 multiplied_deltay = deltay_multiplier * deltay
 
+
                 # Comentado para remover serial
                 serialSendEncoder(multiplied_deltax,
                                   multiplied_deltay)  # <- Envia informações de deslocamento para o modulo pulsador
@@ -712,24 +745,33 @@ def minha_thread():
 
 
 
+
                 # Exemplo de array para ser salvo:
                 array_to_save = [time.time(), gyroData, total_deltax, total_deltay]
                 print(array_to_save)
 
-                # salvando x e y para o web
+                # salvando x e y
+                # para o web
                 # Recomendo limitar o salvamento a um intervalo. Mas é só uma sugestão mesmo.
+
+
+
 
                 totaly = round(total_deltay, 2)
                 totalx = round(total_deltax, 2)
+                ##print("test")
 
                 rotation_matrix = quaternion_to_rotation_matrix(gyroData)
-                point_3d = np.dot(rotation_matrix, [totaly, totalx, 0])
+                # angles = quaternion_to_euler(gyroData)
+                # print(angles)
+                point_3d = point_3d + np.dot(rotation_matrix, [multiplied_deltay, multiplied_deltax, 0 ])
+                point_2d = point_2d + [multiplied_deltax, multiplied_deltay, 0]
+                ##print("test1")
 
-                r = scipy.spatial.transform.Rotation.from_quat([gyroData])
-                v = [totalx, totaly, 0]
-                ddd = r.apply(v)
+                # r = scipy.spatial.transform.Rotation.from_quat([gyroData])
+                # v = [totalx, totaly, 0]
+                # ddd = r.apply(v)
                 ## alterar a forma que o ddd esta gerando os dados para a analise de deslocamento ser mais rapida
-                print(point_3d)
 
 
                 lock_quat.acquire()
@@ -738,12 +780,9 @@ def minha_thread():
                     lista_dados.append(totaly)
                     lista_imu.append(gyroData)
                     all_points_3d.append(point_3d)
-                    final_3d = [list(arr) for arr in all_points_3d]
-                    print(all_points_3d)
-                    print(final_3d)
+                    all_points_2d.append(point_2d)
+                    ##print(point_3d)
 
-
-                    lista_3d.append(ddd)
 
                 lock_quat.release()
 
@@ -769,12 +808,30 @@ def minha_thread():
         except Exception as exc:
             print("Erro:", exc)
         i += 1
-        print('i = ', i)
+        ## print('i = ', i)
         # if i > 50:
         #     break
     print("aqui")
     return ""
 
+def quaternion_to_euler(quat):
+    w, x, y, z = quat
+    ysqr = y * y
+
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + ysqr)
+    X = np.degrees(np.arctan2(t0, t1))
+
+    t2 = +2.0 * (w * y - z * x)
+
+    t2 = np.clip(t2, a_min=-1.0, a_max=1.0)
+    Y = np.degrees(np.arcsin(t2))
+
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (ysqr + z * z)
+    Z = np.degrees(np.arctan2(t3, t4))
+
+    return X, Y, Z
 
 def salvar_dados_arquivo():
     global lista_dados, lista_dados2, lista_imu, lista_3d, ddd
@@ -802,38 +859,58 @@ def iniciar():
 
 @app.route('/3D')
 def vizu3d():
-    global final_3d
+    global all_points_3d
+    global all_points_2d
 
-    # Dados para o gráfico 3D
-    data = [[-0.00451, -0.090264, -0.00571],
-            [-0.016364, -0.06096, -0.004364],
-            [-0.00757, -0.040444, -0.00277],
-            [0.012466, -0.039268, -0.001934]]
+    final_3d = [list(arr) for arr in all_points_3d]
+    final_2d = [list(arr) for arr in all_points_2d]
+
 
     # Criar um gráfico de dispersão 3D
-    trace = go.Scatter3d(
-        x=[point[0] for point in final_3d],
-        y=[point[1] for point in final_3d],
-        z=[point[2] for point in final_3d],
-        mode='markers',
-        marker=dict(
-            size=12,
-            color='blue',
-            opacity=0.8
-        )
-    )
-
-    # Layout do gráfico
     layout = go.Layout(
         scene=dict(
             xaxis=dict(title='X'),
             yaxis=dict(title='Y'),
-            zaxis=dict(title='Z')
+            zaxis=dict(title='Z'),
+            aspectmode='data'
         )
     )
 
+
     # Criar a figura do gráfico
-    fig = go.Figure(data=[trace], layout=layout)
+    fig = go.Figure(layout=layout)
+    fig.add_trace(
+        go.Scatter3d(
+            x=[point[0] for point in final_3d],
+            y=[point[1] for point in final_3d],
+            z=[point[2] for point in final_3d],
+            mode='markers',
+
+            marker=dict(
+                size=12,
+                color='blue',
+                opacity=0.8,
+
+            )
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[point[0] for point in final_2d],
+            y=[point[1] for point in final_2d],
+            z=[point[2] for point in final_2d],
+            mode='markers',
+
+            marker=dict(
+                size=12,
+                color='red',
+                opacity=0.8,
+            )
+        )
+    )
+
+    fig.layout
 
     # Converter a figura para HTML
     graph_html = fig.to_html(full_html=False)
@@ -900,6 +977,7 @@ def autofoco():
     global vid
     global counter
     global score_history
+
 
     while counter < 260:
         ret, frame = vid.read()
