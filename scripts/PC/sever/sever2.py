@@ -558,10 +558,10 @@ total_rec_time = 60  # seconds
 max_fps = 30  # Define o FPS máximo desejado
 
 score_history = [0] * 270
-counter = 0
+counter = 0 #valor padrão do foco
 
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-vid.set(cv2.CAP_PROP_FOCUS, counter)
+vid.set(cv2.CAP_PROP_FOCUS, 255)
 
 serial_pulsador = 0
 
@@ -748,7 +748,7 @@ def minha_thread():
 
                 # Exemplo de array para ser salvo:
                 array_to_save = [time.time(), gyroData, total_deltax, total_deltay]
-                print(array_to_save)
+                #print(array_to_save)
 
                 # salvando x e y
                 # para o web
@@ -833,22 +833,36 @@ def quaternion_to_euler(quat):
 
     return X, Y, Z
 
+# def salvar_dados_arquivo():
+#     global all_points_3d, lista_dados2, lista_imu, lista_3d
+#     print(lista_3d)
+#     print("lista_3d:")
+#     dados_lista = [arr.tolist() for arr in lista_3d]
+#     print(dados_lista)
+#
+#     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
+#     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
+#     print(arquivo_dados)
+#     with open(arquivo_dados, "w") as arquivo:
+#         for x, y, z in zip(lista_dados, lista_dados2, lista_3d):
+#             arquivo.write(
+#                 f"{x}|{y}|{z}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
+
+
 def salvar_dados_arquivo():
-    global lista_dados, lista_dados2, lista_imu, lista_3d, ddd
-    print(ddd)
-    print("ddd:")
-    print(lista_3d)
-    print("lista_3d:")
-    dados_lista = [arr.tolist() for arr in lista_3d]
-    print(dados_lista)
+    global all_points_3d, all_points_2d
+
+
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
-    print(arquivo_dados)
+
     with open(arquivo_dados, "w") as arquivo:
-        for x, y, z in zip(lista_dados, lista_dados2, lista_3d):
-            arquivo.write(
-                f"{x}|{y}|{z}\n")  # Escreve os dados x e y em uma linha, separados por um espaço e com uma quebra de linha no final
+        for points_2d, points_3d in zip(all_points_2d, all_points_3d):
+            # Convertendo os pontos 3D em uma string separada por vírgula
+            points_3d_str = ','.join(map(str, points_3d))
+            # Escrevendo os pontos 2D e 3D no arquivo, separados por |
+            arquivo.write(f"{','.join(map(str, points_2d))}|{points_3d_str}\n")
 
 @app.route('/iniciar', methods=["GET", "POST"])
 def iniciar():
@@ -918,6 +932,70 @@ def vizu3d():
     # Renderizar o template HTML com o gráfico
     return render_template('3d_visualization.html', graph_html=graph_html)
 
+@app.route('/3Dpos')
+def vizu3dpos():
+    global all_points_3d
+    global all_points_2d
+
+    final_3d = [list(arr) for arr in all_points_3d]
+    final_2d = [list(arr) for arr in all_points_2d]
+
+    print(final_2d)
+    print(final_3d)
+
+
+    # Criar um gráfico de dispersão 3D
+    layout = go.Layout(
+        scene=dict(
+            xaxis=dict(title='X'),
+            yaxis=dict(title='Y'),
+            zaxis=dict(title='Z'),
+            aspectmode='data'
+        )
+    )
+
+
+    # Criar a figura do gráfico
+    fig = go.Figure(layout=layout)
+    fig.add_trace(
+        go.Scatter3d(
+            x=[point[0] for point in final_3d],
+            y=[point[1] for point in final_3d],
+            z=[point[2] for point in final_3d],
+            mode='markers',
+
+            marker=dict(
+                size=12,
+                color='blue',
+                opacity=0.8,
+
+            )
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[point[0] for point in final_2d],
+            y=[point[1] for point in final_2d],
+            z=[point[2] for point in final_2d],
+            mode='markers',
+
+            marker=dict(
+                size=12,
+                color='red',
+                opacity=0.8,
+            )
+        )
+    )
+
+    fig.layout
+
+    # Converter a figura para HTML
+    graph_html = fig.to_html(full_html=False)
+
+    # Renderizar o template HTML com o gráfico
+    return render_template('3d_visualization.html', graph_html=graph_html)
+
 @app.route('/finalizar', methods=["GET", "POST"])
 def finalizar():
     print("teste")
@@ -931,6 +1009,88 @@ def finalizar():
     printar = False
     return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
 
+# def alterarVariavel(valor):
+#
+#     minhaVariavel = valor
+#
+#     return minhaVariavel
+
+@app.route('/3D/<nome_arquivo>', methods=["GET", "POST"])
+def abrirArquivo(nome_arquivo):
+    dd = []
+    ddd = []
+    try:
+        arquivo_path = os.path.join(data_dir, nome_arquivo)
+        if os.path.isfile(arquivo_path):
+            with open(arquivo_path, "r") as arquivo:
+                for linha in arquivo:
+                    numeros = linha.strip().split('|')
+                    dois = numeros[0].strip().split(',')
+                    tres = numeros[1].strip().split(',')
+                    float_dois = [float(x) for x in dois]
+                    float_tres = [float(x) for x in tres]
+                    dd.append(float_dois)
+                    ddd.append(float_tres)
+                # fim abertura arquivo
+                # Criar um gráfico de dispersão 3D
+                layout = go.Layout(
+                    scene=dict(
+                        xaxis=dict(title='X'),
+                        yaxis=dict(title='Y'),
+                        zaxis=dict(title='Z'),
+                          aspectmode='data'
+                    )
+                   )
+
+                # Criar a figura do gráfico
+                fig = go.Figure(layout=layout)
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=[point[0] for point in ddd],
+                        y=[point[1] for point in ddd],
+                        z=[point[2] for point in ddd],
+                        mode='markers',
+
+                        marker=dict(
+                            size=12,
+                            color='blue',
+                            opacity=0.8,
+
+                        )
+                    )
+                )
+
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=[point[0] for point in dd],
+                        y=[point[1] for point in dd],
+                        z=[point[2] for point in dd],
+                        mode='markers',
+
+                        marker=dict(
+                            size=12,
+                            color='red',
+                            opacity=0.8,
+                        )
+                    )
+                )
+
+                fig.layout
+
+                # Converter a figura para HTML
+                graph_html = fig.to_html(full_html=False)
+                # Renderizar o template HTML com o gráfico
+                return render_template('3d_visualization.html', graph_html=graph_html)
+
+
+        else:
+            flask.abort(
+                404)  # Retorna um erro 404 se o arquivo não existir  <form action="/download" method="post"><button type="submit" style="width: 150px; height: 50px;">download</button>
+
+    except Exception as e:
+
+        return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
+
 @app.route('/dados', methods=["GET", "POST"])
 def mostrar_dados():
     html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
@@ -940,7 +1100,8 @@ def mostrar_dados():
 
     # Criar botões para cada arquivo .txt
     for arquivo in arquivos_txt:
-        html += f'<form action="/abrir_arquivo/{arquivo}" method="post"><button type="submit" style="width: 150px; height: 50px;">{arquivo}</button></form>'
+        html += f'<form action="/abrir_arquivo/{arquivo}" method="post"><button type="submit" style="width: 150px; height: 50px;">{arquivo}</button></form><form action="/3D/{arquivo}" method="post"><button style="width: 150px; height: 50px;background;">{arquivo}</button></form>'
+
 
     html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">finish prog</button></form></div>'
     return html
