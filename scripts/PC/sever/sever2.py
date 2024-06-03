@@ -533,17 +533,17 @@ diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 diretorio_atual = os.getcwd()
 
 
-
+global data_dir
 data_dir = os.path.join(diretorio_atual, 'data')
 
 # Verifica se o diretório "data" existe
 if os.path.isdir(data_dir):
-    files = os.listdir(data_dir)
-    for file_name in files:
-        file_path = os.path.join(data_dir, file_name)
-        os.remove(file_path)
-    os.rmdir(data_dir)
-    os.mkdir(data_dir)
+     files = os.listdir(data_dir)
+    # for file_name in files:
+    #     file_path = os.path.join(data_dir, file_name)
+    #     os.remove(file_path)
+    # os.rmdir(data_dir)
+    # os.mkdir(data_dir)
 else:
     os.mkdir(data_dir)
 
@@ -748,7 +748,7 @@ def minha_thread():
 
                 # Exemplo de array para ser salvo:
                 array_to_save = [time.time(), gyroData, total_deltax, total_deltay]
-                #print(array_to_save)
+                print(array_to_save)
 
                 # salvando x e y
                 # para o web
@@ -930,71 +930,8 @@ def vizu3d():
     graph_html = fig.to_html(full_html=False)
 
     # Renderizar o template HTML com o gráfico
-    return render_template('3d_visualization.html', graph_html=graph_html)
+    return graph_html
 
-@app.route('/3Dpos')
-def vizu3dpos():
-    global all_points_3d
-    global all_points_2d
-
-    final_3d = [list(arr) for arr in all_points_3d]
-    final_2d = [list(arr) for arr in all_points_2d]
-
-    print(final_2d)
-    print(final_3d)
-
-
-    # Criar um gráfico de dispersão 3D
-    layout = go.Layout(
-        scene=dict(
-            xaxis=dict(title='X'),
-            yaxis=dict(title='Y'),
-            zaxis=dict(title='Z'),
-            aspectmode='data'
-        )
-    )
-
-
-    # Criar a figura do gráfico
-    fig = go.Figure(layout=layout)
-    fig.add_trace(
-        go.Scatter3d(
-            x=[point[0] for point in final_3d],
-            y=[point[1] for point in final_3d],
-            z=[point[2] for point in final_3d],
-            mode='markers',
-
-            marker=dict(
-                size=12,
-                color='blue',
-                opacity=0.8,
-
-            )
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter3d(
-            x=[point[0] for point in final_2d],
-            y=[point[1] for point in final_2d],
-            z=[point[2] for point in final_2d],
-            mode='markers',
-
-            marker=dict(
-                size=12,
-                color='red',
-                opacity=0.8,
-            )
-        )
-    )
-
-    fig.layout
-
-    # Converter a figura para HTML
-    graph_html = fig.to_html(full_html=False)
-
-    # Renderizar o template HTML com o gráfico
-    return render_template('3d_visualization.html', graph_html=graph_html)
 
 @app.route('/finalizar', methods=["GET", "POST"])
 def finalizar():
@@ -1015,6 +952,16 @@ def finalizar():
 #
 #     return minhaVariavel
 
+@app.route('/excluir/<nome_arquivo>', methods=["GET", "POST"])
+def excluirArquivo(nome_arquivo):
+    global data_dir
+    caminho_arquivo = os.path.join(data_dir, nome_arquivo)
+
+    # Verifica se o arquivo existe
+    if os.path.exists(caminho_arquivo):
+        # Remove o arquivo
+        os.remove(caminho_arquivo)
+    return flask.redirect(flask.url_for('mostrar_dados'))
 @app.route('/3D/<nome_arquivo>', methods=["GET", "POST"])
 def abrirArquivo(nome_arquivo):
     dd = []
@@ -1060,27 +1007,27 @@ def abrirArquivo(nome_arquivo):
                     )
                 )
 
-                fig.add_trace(
-                    go.Scatter3d(
-                        x=[point[0] for point in dd],
-                        y=[point[1] for point in dd],
-                        z=[point[2] for point in dd],
-                        mode='markers',
-
-                        marker=dict(
-                            size=12,
-                            color='red',
-                            opacity=0.8,
-                        )
-                    )
-                )
+                # fig.add_trace(
+                #     go.Scatter3d(
+                #         x=[point[0] for point in dd],
+                #         y=[point[1] for point in dd],
+                #         z=[point[2] for point in dd],
+                #         mode='markers',
+                #
+                #         marker=dict(
+                #             size=12,
+                #             color='red',
+                #             opacity=0.8,
+                #         )
+                #     )
+                # )
 
                 fig.layout
 
                 # Converter a figura para HTML
                 graph_html = fig.to_html(full_html=False)
                 # Renderizar o template HTML com o gráfico
-                return render_template('3d_visualization.html', graph_html=graph_html)
+                return graph_html
 
 
         else:
@@ -1095,15 +1042,15 @@ def abrirArquivo(nome_arquivo):
 def mostrar_dados():
     html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
 
+    html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">finish prog</button></form>'
+
     # Listar todos os arquivos .txt no diretório atual
     arquivos_txt = [arquivo for arquivo in os.listdir(data_dir) if arquivo.endswith(".txt")]
 
     # Criar botões para cada arquivo .txt
     for arquivo in arquivos_txt:
-        html += f'<form action="/abrir_arquivo/{arquivo}" method="post"><button type="submit" style="width: 150px; height: 50px;">{arquivo}</button></form><form action="/3D/{arquivo}" method="post"><button style="width: 150px; height: 50px;background;">{arquivo}</button></form>'
-
-
-    html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">finish prog</button></form></div>'
+        html += f'<div style="vertical-align: middle;"><tr><td>{arquivo}</td>	<td style="vertical-align: middle;"><a href="/3D/{arquivo}"><button style="width: 90px; height: 20px;background;">Visualizar</button></a></td>	<td style="vertical-align: middle;"><a href="/abrir_arquivo/{arquivo}"><button style="width: 90px; height: 20px;background;">Baixar</button></a></td>	<td style="vertical-align: middle;"><a href="/excluir/{arquivo}"><button style="width: 90px; height: 20px;background;">Excluir</button><br></a></td></tr></div>'
+    html += '</div>'
     return html
 
 @app.route('/abrir_arquivo/<nome_arquivo>', methods=["GET", "POST"])
