@@ -494,7 +494,7 @@ def score_mlog(img):
 
 # Configurações de câmera
 camera_id = 0           # Defina o id da câmera
-camera_exposure = None   # Defina exposição da câmera
+camera_exposure = -10   # Defina exposição da câmera
 
 # Multiplicadores de deslocamento
 deltax_multiplier = 1 # Defina o multiplicador de deslocamento X
@@ -510,11 +510,12 @@ phase_windowing = None                       # Aplica o janelamento no sinal fin
 
 
 # Obtém o diretório atual do arquivo Python
-dir_path = os.path.dirname(os.path.realpath(__file__))
+# dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # Caminho para o arquivo HTML
-html_file_path = os.path.join(dir_path, 'executar.html')
 
+#html_file_path = os.path.join(dir_path, 'executar.html')
+html_file_path = "http://127.0.0.1:5000"
 
 
 app = flask.Flask(__name__)
@@ -559,9 +560,10 @@ max_fps = 30  # Define o FPS máximo desejado
 
 score_history = [0] * 270
 counter = 0 #valor padrão do foco
+camera_focus = 255
 
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-vid.set(cv2.CAP_PROP_FOCUS, 255)
+vid.set(cv2.CAP_PROP_FOCUS, camera_focus)
 
 serial_pulsador = 0
 
@@ -657,7 +659,7 @@ def minha_thread():
     intxacumulado = 0
     intyacumulado = 0
 
-    enable_giroscopio = True
+    enable_giroscopio = False
     enable_pulsador = False
 
     ports = serial.tools.list_ports.comports()
@@ -891,19 +893,23 @@ codigo_iniciado = False
 
 @app.route('/')
 def index():
-    global calculating, codigo_iniciado
-    autofocus_btn = '<form action="/autofoco" method="post"><button type="submit" style="width: 150px; height: 50px;">Autofoco</button></form>'
+    global calculating, codigo_iniciado,camera_focus
+    autofocus_btn = f'<form action="/autofoco" method="post"><button type="submit" style="width: 150px; height: 50px;">Autofoco {camera_focus}</button></form>'
     iniciar_btn = '<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">Iniciar</button></form>' if not codigo_iniciado else ''
     parar_btn = '<form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">Parar</button></form>' if codigo_iniciado else ''
     visualisation_btn = '<form action="/3D" method="get"><button type="submit" style="width: 150px; height: 50px;">3D</button></form>' if codigo_iniciado else ''
-    pagina_principal = f'''
+    dados_btn = '<form action="/dados" method="get"><button type="submit" style="width: 150px; height: 50px;">Resultados</button></form>'
+    finish_prog_btn = '<form action="/finish" method="get"><button type="submit" style="width: 150px; height: 50px;">Finalizar Programação</button></form>'
+
+    pagina_principal = f''' 
     
     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">
-        {autofocus_btn}
+        {autofocus_btn} 
         {iniciar_btn}
         {parar_btn}
         {visualisation_btn}
-        <form action="/dados" method="get"><button type="submit" style="width: 150px; height: 50px;">Resultados</button></form>
+        {dados_btn}
+        {finish_prog_btn}
     </div>
     '''
     return render_template_string(pagina_principal)
@@ -934,6 +940,7 @@ def processar_autofoco():
     global vid
     global counter
     global score_history
+    global camera_focus
 
     counter = 0
     score_history = [0] * 270
@@ -946,7 +953,8 @@ def processar_autofoco():
         counter += 5
         vid.set(cv2.CAP_PROP_FOCUS, counter)
 
-    vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
+    camera_focus = np.argmax(score_history)
+    vid.set(cv2.CAP_PROP_FOCUS, camera_focus)
     calculating = False
     return '', 200  # Responde OK para a requisição fetch
 
@@ -1176,6 +1184,31 @@ def abrir_arquivo(nome_arquivo):
 
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
 
+
+@app.route('/finish', methods=["GET", "POST"])
+def finish():
+    global cont
+
+    if enable_giroscopio == True:
+        time.sleep(0.3)
+        serial_giroscopio.setRTS(False)
+        time.sleep(0.3)
+        serial_giroscopio.setRTS(True)
+        time.sleep(0.3)
+        serial_giroscopio.setRTS(False)
+
+    if enable_pulsador == True:
+        time.sleep(0.3)
+        serial_pulsador.setRTS(False)
+        time.sleep(0.3)
+        serial_pulsador.setRTS(True)
+        time.sleep(0.3)
+        serial_pulsador.setRTS(False)
+
+    cont = False
+    os.kill(os.getpid(), signal.SIGINT)
+
+    return "Finished"
 
 if __name__ == "__main__":
     thread = threading.Thread(target=minha_thread)
