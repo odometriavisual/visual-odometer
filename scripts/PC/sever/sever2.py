@@ -659,7 +659,7 @@ def minha_thread():
     print("ports = ", ports)
     for port in ports:
         print(port)
-        if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "5698011281" or port.serial_number == "5767002927":
+        if port.serial_number == "56CA000930" or port.serial_number == "5598007147" or port.serial_number == "5698011281" or port.serial_number == "5767002927" or port.serial_number == "EC:DA:3B:BF:A7:60":
             print("Iniciando conecção com o modulo do giroscópio")
             serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
             serial_giroscopio.setRTS(False)
