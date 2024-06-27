@@ -30,7 +30,7 @@ from flask import Flask, render_template
 import numpy as np
 
 import plotly.graph_objs as go
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, redirect, url_for
 
 
 
@@ -875,6 +875,7 @@ def salvar_dados_arquivo():
     global all_points_3d, all_points_2d
 
 
+
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Cria um timestamp único
     arquivo_dados = os.path.join(data_dir, f"dados_{timestamp}.txt")  # Nome do arquivo com timestamp
 
@@ -885,18 +886,94 @@ def salvar_dados_arquivo():
             # Escrevendo os pontos 2D e 3D no arquivo, separados por |
             arquivo.write(f"{','.join(map(str, points_2d))}|{points_3d_str}\n")
 
-@app.route('/iniciar', methods=["GET", "POST"])
+calculating = False
+codigo_iniciado = False
+
+@app.route('/')
+def index():
+    global calculating, codigo_iniciado
+    autofocus_btn = '<form action="/autofoco" method="post"><button type="submit" style="width: 150px; height: 50px;">Autofoco</button></form>'
+    iniciar_btn = '<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">Iniciar</button></form>' if not codigo_iniciado else ''
+    parar_btn = '<form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">Parar</button></form>' if codigo_iniciado else ''
+    visualisation_btn = '<form action="/3D" method="get"><button type="submit" style="width: 150px; height: 50px;">3D</button></form>' if codigo_iniciado else ''
+    pagina_principal = f'''
+    
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">
+        {autofocus_btn}
+        {iniciar_btn}
+        {parar_btn}
+        {visualisation_btn}
+        <form action="/dados" method="get"><button type="submit" style="width: 150px; height: 50px;">Resultados</button></form>
+    </div>
+    '''
+    return render_template_string(pagina_principal)
+
+@app.route('/autofoco', methods=['POST'])
+def autofoco():
+    global calculating
+    calculating = True
+    autofocus_page = '''
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">
+        Calculando Autofoco...
+    </div>
+    <script>
+        fetch('/processar_autofoco')
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    </script>
+    '''
+    return render_template_string(autofocus_page)
+
+@app.route('/processar_autofoco')
+def processar_autofoco():
+    global calculating
+    global vid
+    global counter
+    global score_history
+
+    counter = 0
+    score_history = [0] * 270
+
+    while counter < 260:
+        ret, frame = vid.read()
+        cv2_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        focus_score = score_teng(cv2_img)
+        score_history[counter] = focus_score
+        counter += 5
+        vid.set(cv2.CAP_PROP_FOCUS, counter)
+
+    vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
+    calculating = False
+    return '', 200  # Responde OK para a requisição fetch
+
+@app.route('/iniciar', methods=['POST'])
 def iniciar():
-    global printar, all_points_3d, all_points_2d
+    global codigo_iniciado, printar
+    codigo_iniciado = True
     all_points_3d = []
     all_points_2d = []
-
     printar = True
 
-    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><a href="/3D"><button style="width: 150px; height: 50px;background;">3D</button></a><form action="/finalizar" method="post"><button type="submit" style="width: 150px; height: 50px;">stop</button></form></div>'
+    return redirect(url_for('index'))
 
-@app.route('/3D')
-def vizu3d():
+@app.route('/parar', methods=['POST'])
+def parar():
+    global codigo_iniciado, printar, lista_dados, lista_dados2, lista_imu, lista_3d
+    codigo_iniciado = False
+    salvar_dados_arquivo()
+    lista_dados = []  # Limpa a lista após salvar os dados
+    lista_dados2 = []
+    lista_imu = []
+    lista_3d = []
+    printar = False
+    return redirect(url_for('index'))
+
+@app.route('/3D', methods=['GET'])
+def page_3d():
     global all_points_3d
     global all_points_2d
 
@@ -964,13 +1041,13 @@ def vizu3d():
         <title>3D Visualization</title>
         <script type="text/javascript">
             function goToIniciar() {
-                window.location.href = "/iniciar";
+                window.location.href = "/";
             }
         </script>
     </head>
     <body>
         <div>
-            <button onclick="goToIniciar()">Retornar para /iniciar</button>
+            <button onclick="goToIniciar()">Retornar ao menu principal</button>
         </div>
         <div>
             {{ graph_html|safe }}
@@ -981,28 +1058,20 @@ def vizu3d():
 
     return render_template_string(html_template, graph_html=graph_html)
 
-    # Renderizar o template HTML com o gráfico
-    # return graph_html
+@app.route('/dados', methods=['GET'])
+def dados():
+    html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
 
+    html += '<br><br><form action="/" method="get"><button type="submit" style="width: 150px; height: 50px;">Voltar ao menu principal</button></form>'
 
-@app.route('/finalizar', methods=["GET", "POST"])
-def finalizar():
-    print("teste")
-    global printar
-    global lista_dados, lista_dados2, lista_imu, lista_3d
-    salvar_dados_arquivo()
-    lista_dados = []  # Limpa a lista após salvar os dados
-    lista_dados2 = []
-    lista_imu = []
-    lista_3d = []
-    printar = False
-    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;"><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
+    # Listar todos os arquivos .txt no diretório atual
+    arquivos_txt = [arquivo for arquivo in os.listdir(data_dir) if arquivo.endswith(".txt")]
 
-# def alterarVariavel(valor):
-#
-#     minhaVariavel = valor
-#
-#     return minhaVariavel
+    # Criar botões para cada arquivo .txt
+    for arquivo in arquivos_txt:
+        html += f'<div style="vertical-align: middle;"><tr><td>{arquivo}</td>	<td style="vertical-align: middle;"><a href="/3D/{arquivo}"><button style="width: 90px; height: 20px;background;">Visualizar</button></a></td>	<td style="vertical-align: middle;"><a href="/abrir_arquivo/{arquivo}"><button style="width: 90px; height: 20px;background;">Baixar</button></a></td>	<td style="vertical-align: middle;"><a href="/excluir/{arquivo}"><button style="width: 90px; height: 20px;background;">Excluir</button><br></a></td></tr></div>'
+    html += '</div>'
+    return html
 
 @app.route('/excluir/<nome_arquivo>', methods=["GET", "POST"])
 def excluirArquivo(nome_arquivo):
@@ -1013,7 +1082,8 @@ def excluirArquivo(nome_arquivo):
     if os.path.exists(caminho_arquivo):
         # Remove o arquivo
         os.remove(caminho_arquivo)
-    return flask.redirect(flask.url_for('mostrar_dados'))
+    return redirect(url_for('dados'))
+
 @app.route('/3D/<nome_arquivo>', methods=["GET", "POST"])
 def abrirArquivo(nome_arquivo):
     dd = []
@@ -1090,22 +1160,6 @@ def abrirArquivo(nome_arquivo):
 
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
 
-@app.route('/dados', methods=["GET", "POST"])
-def mostrar_dados():
-    html = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">'
-
-    html += '<br><br><form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/parar" method="post"><button type="submit" style="width: 150px; height: 50px;">finish prog</button></form>'
-
-    # Listar todos os arquivos .txt no diretório atual
-    arquivos_txt = [arquivo for arquivo in os.listdir(data_dir) if arquivo.endswith(".txt")]
-
-    # Criar botões para cada arquivo .txt
-    for arquivo in arquivos_txt:
-        html += f'<div style="vertical-align: middle;"><tr><td>{arquivo}</td>	<td style="vertical-align: middle;"><a href="/3D/{arquivo}"><button style="width: 90px; height: 20px;background;">Visualizar</button></a></td>	<td style="vertical-align: middle;"><a href="/abrir_arquivo/{arquivo}"><button style="width: 90px; height: 20px;background;">Baixar</button></a></td>	<td style="vertical-align: middle;"><a href="/excluir/{arquivo}"><button style="width: 90px; height: 20px;background;">Excluir</button><br></a></td></tr></div>'
-    html += '</div>'
-    return html
-
-
 @app.route('/abrir_arquivo/<nome_arquivo>', methods=["GET", "POST"])
 def abrir_arquivo(nome_arquivo):
     try:
@@ -1122,61 +1176,6 @@ def abrir_arquivo(nome_arquivo):
 
         return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
 
-@app.route('/download/<nome_arquivo>', methods=["GET"])
-def download(nome_arquivo):
-    try:
-        arquivo_path = os.path.join(data_dir, nome_arquivo)
-        if os.path.isfile(arquivo_path):
-            return flask.send_file(arquivo_path, as_attachment=True)
-        else:
-            flask.abort(404)  # Retorna um erro 404 se o arquivo não existir
-    except Exception as e:
-        return "Erro interno do servidor", 500  # Retorna um erro 500 se ocorrer uma exceção
-
-@app.route('/autofoco', methods=["GET", "POST"])
-def autofoco():
-    global vid
-    global counter
-    global score_history
-
-    counter = 0
-    score_history = [0] * 270
-
-    while counter < 260:
-        ret, frame = vid.read()
-        cv2_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        focus_score = score_teng(cv2_img)
-        score_history[counter] = focus_score
-        counter += 5
-        vid.set(cv2.CAP_PROP_FOCUS, counter)
-
-    vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
-    return f'<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">{np.argmax(score_history)}<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
-
-@app.route('/parar', methods=["GET", "POST"])
-def parar():
-    global cont
-
-    if enable_giroscopio == True:
-        time.sleep(0.3)
-        serial_giroscopio.setRTS(False)
-        time.sleep(0.3)
-        serial_giroscopio.setRTS(True)
-        time.sleep(0.3)
-        serial_giroscopio.setRTS(False)
-
-    if enable_pulsador == True:
-        time.sleep(0.3)
-        serial_pulsador.setRTS(False)
-        time.sleep(0.3)
-        serial_pulsador.setRTS(True)
-        time.sleep(0.3)
-        serial_pulsador.setRTS(False)
-
-    cont = False
-    os.kill(os.getpid(), signal.SIGINT)
-
-    return "Finished"
 
 if __name__ == "__main__":
     thread = threading.Thread(target=minha_thread)
