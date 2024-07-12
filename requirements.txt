@@ -5,9 +5,10 @@ matplotlib==3.8.3
 numpy==1.26.4
 numpy_stl==3.1.1
 opencv_python==4.9.0.80
-picamera2==0.3.17
+#picamera2==0.3.17 --Apenas no raspberry pi
 Pillow==10.3.0
 pyserial==3.5
 scipy==1.13.0
 stl==0.0.3
 tqdm==4.66.2
+plotly

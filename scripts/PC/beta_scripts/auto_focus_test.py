@@ -23,7 +23,7 @@ print('Requesting access to camera. This may take a while...')
 vid = cv2.VideoCapture(camera_id)
 print('Got access to camera!')
 
-score_history = [0]*255
+score_history = [0]*1000
 counter = 0
 
 vid.set(cv2.CAP_PROP_AUTOFOCUS, 0)
@@ -40,13 +40,13 @@ while True:
         ret, frame = vid.read()
         cv2_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        if counter < 255:
+        if counter < 1000:
             focus_score = score_teng(cv2_img)
             score_history[counter] = focus_score
-        elif counter == 255:
+        elif counter == 1000:
             print(f"Foco ideal detectado: {int(np.argmax(score_history))}")
         counter+=5
-        if counter < 255:
+        if counter < 1000:
             vid.set(cv2.CAP_PROP_FOCUS, counter)
         else:
             pass
