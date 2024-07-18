@@ -493,7 +493,7 @@ def score_mlog(img):
 
 
 # Configurações de câmera
-camera_id = 0           # Defina o id da câmera
+camera_id = 1           # Defina o id da câmera
 camera_exposure = -10   # Defina exposição da câmera
 
 # Multiplicadores de deslocamento
@@ -709,7 +709,7 @@ def minha_thread():
     # -- Inicio da configuração da câmera --- #
 
     print('Pegando acesso a camera, isso pode demorar um pouco...')
-    ##vid = cv2.VideoCapture(camera_id)
+    vid = cv2.VideoCapture(camera_id)
 
 
     if camera_exposure != None:
@@ -1048,14 +1048,14 @@ def page_3d():
     <head>
         <title>3D Visualization</title>
         <script type="text/javascript">
-            function goToIniciar() {
-                window.location.href = "/";
+            function retornarDados() {
+                window.location.href = "/dados";
             }
         </script>
     </head>
     <body>
         <div>
-            <button onclick="goToIniciar()">Retornar ao menu principal</button>
+            <button onclick="retornarDados()">Retornar ao menu principal</button>
         </div>
         <div>
             {{ graph_html|safe }}
@@ -1157,7 +1157,30 @@ def abrirArquivo(nome_arquivo):
                 # Converter a figura para HTML
                 graph_html = fig.to_html(full_html=False)
                 # Renderizar o template HTML com o gráfico
-                return graph_html
+                html_template = '''
+                <html>
+                <head>
+                    <title>3D Visualization</title>
+                    <script type="text/javascript">
+                        function goToIniciar() {
+                            window.location.href = "/";
+                        }
+                    </script>
+                </head>
+                <body>
+                    <div>
+                        <button onclick="goToIniciar()">Retornar aos resultados</button>
+                    </div>
+                    <div>
+                        {{ graph_html|safe }}
+                    </div>
+                </body>
+                </html>
+                '''
+
+                return render_template_string(html_template, graph_html=graph_html)
+
+                #return graph_html
 
 
         else:
