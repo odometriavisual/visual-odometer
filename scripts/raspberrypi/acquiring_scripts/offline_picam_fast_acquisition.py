@@ -1,3 +1,8 @@
+# This script acquires images from picamera in a fast way. 
+# FPS achieved in
+# RPi 4B: 200 fps;
+# RPi zero 2W: 140 fps;
+
 import io
 import time
 import threading
