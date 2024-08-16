@@ -707,7 +707,7 @@ def minha_thread():
 
         for port in ports:
             print(port)
-            if port.serial_number == "56CA000930":
+            if (port.serial_number == "56CA000930") or (port.serial_number == "EC:DA:3B:BF:A7:60"):
                 print("Iniciando conecção com o modulo do giroscópio")
                 serial_giroscopio = serial.Serial(port=port.device, baudrate=115200, timeout=1)
                 serial_giroscopio.setRTS(False)
@@ -1031,6 +1031,7 @@ def autofoco():
 
     vid.set(cv2.CAP_PROP_FOCUS, np.argmax(score_history))
     return f'<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">{np.argmax(score_history)}<form action="/iniciar" method="post"><button type="submit" style="width: 150px; height: 50px;">start</button></form><br><form action="/dados" method="post"><button type="submit" style="width: 150px; height: 50px;">results</button></form></div>'
+
 
 
 if __name__ == "__main__":
