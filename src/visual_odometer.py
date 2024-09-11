@@ -1,9 +1,27 @@
 import numpy as np
-from virtualencoder.visualodometry.dsp_utils import crosspower_spectrum, normalize_product, phase_fringe_filter
 from scipy.sparse.linalg import svds
 
-from virtualencoder.visualodometry.image_utils import filter_array_by_maxmin
+def normalize_product(F: object, G: object, method="Stone_et_al_2001") -> object:
+    # Versão modificada de crosspower_spectrum() para melhorias de eficiência
 
+    Q = F * np.conj(G) / np.abs(F * np.conj(G))
+    return Q
+
+def phase_fringe_filter(cross_power_spectrum, window_size=(5, 5), threshold=0.03):
+    # Aplica o filtro de média para reduzir o ruído
+    filtered_spectrum = convolve(cross_power_spectrum, np.ones(window_size) / np.prod(window_size), mode='constant')
+
+    # Calcula a diferença entre o espectro original e o filtrado
+    diff_spectrum = cross_power_spectrum - filtered_spectrum
+
+    # Aplica o limiar para identificar as regiões de pico
+    peak_mask = np.abs(diff_spectrum) > threshold
+
+    # Atenua as regiões de pico no espectro original
+    phase_filtered_spectrum = cross_power_spectrum.copy()
+    phase_filtered_spectrum[peak_mask] *= 0.5  # Reduz a amplitude nas regiões de pico
+
+    return phase_filtered_spectrum
 
 def linear_regression(x, y):
     R = np.ones((x.size, 2))
@@ -11,13 +29,11 @@ def linear_regression(x, y):
     mu, c = np.linalg.inv((R.transpose() @ R)) @ R.transpose() @ y
     return mu, c
 
-
 def phase_unwrapping(phase_vec, factor=0.7):
     phase_diff = np.diff(phase_vec)
     corrected_difference = phase_diff - 2. * np.pi * (phase_diff > (2 * np.pi * factor)) + 2. * np.pi * (
                 phase_diff < -(2 * np.pi * factor))
     return np.cumsum(corrected_difference)
-
 
 def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     # Phase unwrapping:
@@ -36,19 +52,6 @@ def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     mu, c = linear_regression(x, y)
     delta = mu * N / (2 * np.pi)
     return delta
-
-
-def svd_method(img_beg, img_end, frequency_window="Stone_et_al_2001"):
-    M, N = img_beg.shape
-    q, Q = crosspower_spectrum(img_end, img_beg, frequency_window)
-    qu, s, qv = svds(Q, k=1)
-    ang_qu = np.angle(qu[:, 0])
-    ang_qv = np.angle(qv[0, :])
-
-    # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltay = svd_estimate_shift(ang_qu, M)
-    deltax = svd_estimate_shift(ang_qv, N)
-    return deltax, deltay
 
 def optimized_svd_method(processed_img_beg, processed_img_end, M, N, phase_windowing=None, finge_filter = True):
     Q = normalize_product(processed_img_end, processed_img_beg)
