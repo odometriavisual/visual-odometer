@@ -1,72 +1,48 @@
 import numpy as np
+import json
 from scipy.sparse.linalg import svds
+from src.displacement_estimators import svd_method
+from numpy.fft import fftshift, fft2
 
-def normalize_product(F: object, G: object, method="Stone_et_al_2001") -> object:
-    # Versão modificada de crosspower_spectrum() para melhorias de eficiência
+from src.preprocessing import image_preprocessing
 
-    Q = F * np.conj(G) / np.abs(F * np.conj(G))
-    return Q
 
-def phase_fringe_filter(cross_power_spectrum, window_size=(5, 5), threshold=0.03):
-    # Aplica o filtro de média para reduzir o ruído
-    filtered_spectrum = convolve(cross_power_spectrum, np.ones(window_size) / np.prod(window_size), mode='constant')
+class VisualOdometer:
+    def __init__(self, displacement_algorithm="svd", frequency_window="Stone_et_al_2001",
+                 spatial_window="blackman-harris", img_size=(640, 480), xres=1, yres=1):
+        self.displacement_algorithm = displacement_algorithm
+        self.frequency_window = frequency_window
+        self.spatial_window = spatial_window
+        self.img_size = img_size
+        self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
+        self.current_position = (0, 0)
+        self.img_processed = list()
 
-    # Calcula a diferença entre o espectro original e o filtrado
-    diff_spectrum = cross_power_spectrum - filtered_spectrum
+    def calibrate(self, new_xres: float, new_yres: float):
+        self.xres, self.yres = new_xres, new_yres
 
-    # Aplica o limiar para identificar as regiões de pico
-    peak_mask = np.abs(diff_spectrum) > threshold
+    def get_distance(self, img_beg: np.ndarray, img_end: np.ndarray):
+        fft_beg = image_preprocessing(img_beg)  # dessa forma é sempre feito o preprocessamento EM DOBRO! (Duas vezes na mesma imagem)
+        fft_end = image_preprocessing(img_end)  # dessa forma é sempre feito o preprocessamento EM DOBRO!
 
-    # Atenua as regiões de pico no espectro original
-    phase_filtered_spectrum = cross_power_spectrum.copy()
-    phase_filtered_spectrum[peak_mask] *= 0.5  # Reduz a amplitude nas regiões de pico
+        if self.displacement_algorithm == "svd":
+            _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0])  # In pixels
+        elif self.displacement_algorithm == "phase-correlation":
+            raise NotImplementedError
+        else:
+            raise TypeError
 
-    return phase_filtered_spectrum
+        # Convert from pixels to millimeters (or equivalent):
+        deltax, deltay = _deltax * self.xres, _deltay * self.yres
+        self.current_position = self.current_position[0] + deltax, self.current_position[1] + deltay
+        return deltax * self.xres, deltay * self.yres
 
-def linear_regression(x, y):
-    R = np.ones((x.size, 2))
-    R[:, 0] = x
-    mu, c = np.linalg.inv((R.transpose() @ R)) @ R.transpose() @ y
-    return mu, c
-
-def phase_unwrapping(phase_vec, factor=0.7):
-    phase_diff = np.diff(phase_vec)
-    corrected_difference = phase_diff - 2. * np.pi * (phase_diff > (2 * np.pi * factor)) + 2. * np.pi * (
-                phase_diff < -(2 * np.pi * factor))
-    return np.cumsum(corrected_difference)
-
-def svd_estimate_shift(phase_vec, N, phase_windowing=None):
-    # Phase unwrapping:
-    phase_unwrapped = phase_unwrapping(phase_vec)
-    r = np.arange(0, phase_unwrapped.size)
-    M = r.size // 2
-    if phase_windowing == None or phase_windowing == False:
-        x = r
-        y = phase_unwrapped
-    elif phase_windowing == "central":
-        x = r[M - 50:M + 50]
-        y = phase_unwrapped[M - 50:M + 50]
-    elif phase_windowing == "initial":
-        x = r[M - 80:M - 10]
-        y = phase_unwrapped[M - 80:M - 10]
-    mu, c = linear_regression(x, y)
-    delta = mu * N / (2 * np.pi)
-    return delta
-
-def optimized_svd_method(processed_img_beg, processed_img_end, M, N, phase_windowing=None, finge_filter = True):
-    Q = normalize_product(processed_img_end, processed_img_beg)
-    if finge_filter is True:
-        Q = phase_fringe_filter(Q)
-
-    qu, s, qv = svds(Q, k=1)
-    ang_qu = np.angle(qu[:, 0])
-    ang_qv = np.angle(qv[0, :])
-
-    # if filter_values: # desativado, resolução inicial do bug nomeado de f153
-    #     ang_qu = filter_array_by_maxmin(ang_qu)
-    #     ang_qv = filter_array_by_maxmin(ang_qv)
-
-    # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltay = svd_estimate_shift(ang_qu, M, phase_windowing)
-    deltax = svd_estimate_shift(ang_qv, N, phase_windowing)
-    return deltax, deltay
+    def save_config(self, path: str, filename="visual-odometer-config"):
+        config = {
+            "Displacement Algorithm": self.displacement_algorithm,
+            "Frequency Window": self.frequency_window,
+            "Spatial Window": self.spatial_window,
+            "Image Size": self.img_size,
+        }
+        with open(path + "/" + filename + ".json", 'w') as fp:
+            json.dump(config, fp)
