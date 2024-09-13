@@ -1,6 +1,6 @@
 [project]
 name = "visual-odometer"
-version = "0.1"
+version = "0.2"
 dependencies = [
     "numpy==1.26.4",
     "opencv_python==4.9.0.80",
