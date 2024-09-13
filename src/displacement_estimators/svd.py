@@ -1,15 +1,14 @@
-from numpy import ndarray
-from scipy.ndimage import convolve
 import numpy as np
-from scipy.sparse.linalg import svds
+from numpy import ndarray
 
+from scipy.ndimage import convolve
+from scipy.sparse.linalg import svds
 
 def normalize_product(F: ndarray, G: ndarray, method="Stone_et_al_2001") -> ndarray:
     # Versão modificada de crosspower_spectrum() para melhorias de eficiência
 
     Q = F * np.conj(G) / np.abs(F * np.conj(G))
     return Q
-
 
 def phase_fringe_filter(cross_power_spectrum: ndarray, window_size=(5, 5), threshold=0.03):
     # Aplica o filtro de média para reduzir o ruído
@@ -27,20 +26,17 @@ def phase_fringe_filter(cross_power_spectrum: ndarray, window_size=(5, 5), thres
 
     return phase_filtered_spectrum
 
-
 def linear_regression(x, y):
     R = np.ones((x.size, 2))
     R[:, 0] = x
     mu, c = np.linalg.inv((R.transpose() @ R)) @ R.transpose() @ y
     return mu, c
 
-
 def phase_unwrapping(phase_vec, factor=0.7):
     phase_diff = np.diff(phase_vec)
     corrected_difference = phase_diff - 2. * np.pi * (phase_diff > (2 * np.pi * factor)) + 2. * np.pi * (
             phase_diff < -(2 * np.pi * factor))
     return np.cumsum(corrected_difference)
-
 
 def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     # Phase unwrapping:
@@ -59,7 +55,6 @@ def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     mu, c = linear_regression(x, y)
     delta = mu * N / (2 * np.pi)
     return delta
-
 
 def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowing=None, finge_filter=True):
     Q = normalize_product(fft_beg, fft_end)
