@@ -71,4 +71,6 @@ def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowi
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
     deltay = svd_estimate_shift(ang_qu, M, phase_windowing)
     deltax = svd_estimate_shift(ang_qv, N, phase_windowing)
-    return deltax, deltay
+
+    # round() pois o retorn é em pixels
+    return round(deltax), round(deltay)
