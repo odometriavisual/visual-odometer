@@ -1,11 +1,15 @@
 import numpy as np
 import json
-from displacement_estimators.svd import svd_method
-from preprocessing import image_preprocessing
+from src.displacement_estimators.svd import svd_method
+from src.preprocessing import image_preprocessing
 
 class VisualOdometer:
-    def __init__(self, displacement_algorithm="svd", frequency_window="Stone_et_al_2001",
-                 spatial_window="blackman-harris", img_size=(640, 480), xres=1, yres=1):
+    def __init__(self, img_size,
+                 xres=1, yres=1,
+                 displacement_algorithm="svd",
+                 frequency_window="Stone_et_al_2001",
+                 spatial_window="blackman-harris"):
+
         self.displacement_algorithm = displacement_algorithm
         self.frequency_window = frequency_window
         self.spatial_window = spatial_window
