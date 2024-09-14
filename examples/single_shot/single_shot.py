@@ -1,4 +1,4 @@
-from src.visual_odometer import VisualOdometer
+from visual_odometer import VisualOdometer
 
 def load(filename):
     from PIL import Image, ImageOps

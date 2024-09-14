@@ -1,7 +1,7 @@
 import numpy as np
 import json
-from src.displacement_estimators.svd import svd_method
-from src.preprocessing import image_preprocessing
+from .displacement_estimators.svd import svd_method
+from .preprocessing import image_preprocessing
 
 class VisualOdometer:
     def __init__(self, img_size,

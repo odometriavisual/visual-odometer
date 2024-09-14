@@ -8,7 +8,7 @@
 import numpy as np
 import cv2
 from PIL import Image, ImageOps
-from src.visual_odometer import VisualOdometer
+from visual_odometer import VisualOdometer
 
 def cv2_to_nparray_grayscale(frame):
     cv2_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -50,7 +50,7 @@ while True:
 ### Single shot
 
 ```python
-from src.visual_odometer import VisualOdometer
+from visual_odometer import VisualOdometer
 
 def load(filename):
     from PIL import Image, ImageOps
