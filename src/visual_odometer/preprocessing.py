@@ -1,17 +1,6 @@
 import numpy as np
 from numpy.fft import fft2, fftshift
 
-import cv2
-from PIL import Image, ImageOps
-
-def cv2_to_nparray_grayscale(frame):
-    cv2_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    img_array_rgb = Image.fromarray(cv2_img)
-    img_grayscale = ImageOps.grayscale(img_array_rgb)
-    img_array = np.asarray(img_grayscale)
-    return img_array
-
-
 def apply_raised_cosine_window(image):
     rows, cols = image.shape
     i = np.arange(rows)
@@ -19,7 +8,6 @@ def apply_raised_cosine_window(image):
     window = 0.5 * (1 + np.cos(np.pi * (2 * i[:, None] - rows) / rows)) * \
              0.5 * (1 + np.cos(np.pi * (2 * j - cols) / cols))
     return image * window
-
 
 def blackman_harris_window(size, a0=0.35875, a1=0.48829, a2=0.14128, a3=0.01168):
     # a0, a1, a2 e a3 são os coeficientes de janelamento
@@ -29,7 +17,6 @@ def blackman_harris_window(size, a0=0.35875, a1=0.48829, a2=0.14128, a3=0.01168)
     window = a0 - a1 * np.cos(2 * np.pi * n / (size - 1)) + a2 * np.cos(4 * np.pi * n / (size - 1)) - a3 * np.cos(
         6 * np.pi * n / (size - 1))
     return window
-
 
 def apply_blackman_harris_window(image):
     height, width = image.shape
