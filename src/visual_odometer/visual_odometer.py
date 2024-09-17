@@ -14,7 +14,7 @@ class VisualOdometer:
                  displacement_algorithm="svd",
                  frequency_window="Stone_et_al_2001",
                  spatial_window="blackman-harris",
-                 num_threads=4, img_buffersize=50):
+                 num_threads=4, img_buffersize=5):
 
         self.displacement_algorithm = displacement_algorithm
         self.frequency_window = frequency_window
