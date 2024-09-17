@@ -2,13 +2,19 @@ import numpy as np
 import json
 from .displacement_estimators.svd import svd_method
 from .preprocessing import image_preprocessing
+from .displacementprocessor import DisplacementProcessor
+import threading
+from collections import deque
+import warnings
+
 
 class VisualOdometer:
     def __init__(self, img_size,
                  xres=1, yres=1,
                  displacement_algorithm="svd",
                  frequency_window="Stone_et_al_2001",
-                 spatial_window="blackman-harris"):
+                 spatial_window="blackman-harris",
+                 num_threads=4, img_buffersize=50):
 
         self.displacement_algorithm = displacement_algorithm
         self.frequency_window = frequency_window
@@ -16,8 +22,18 @@ class VisualOdometer:
         self.img_size = img_size
         self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
 
-        self.current_position = (0, 0)
-        self.imgs_processed = (None, None)
+        self.current_position = (0, 0)  # In pixels
+        self.imgs_processed = deque(maxlen=img_buffersize)
+
+        #
+        self.displacements = deque()
+        self.num_threads = num_threads  # How many threads are dedicated towards displacement estimation
+
+    def __enter__(self):
+        self._start_pool()
+
+    def __exit__(self):
+        self._reset_pool()
 
     def calibrate(self, new_xres: float, new_yres: float):
         self.xres, self.yres = new_xres, new_yres
@@ -38,28 +54,9 @@ class VisualOdometer:
 
         Intendend for single shot usage, for estimating displacements between sequences of images use estimate_last_displacement().
         """
-        fft_beg = image_preprocessing(img_beg)  # dessa forma é sempre feito o preprocessamento EM DOBRO! (Duas vezes na mesma imagem)
+        fft_beg = image_preprocessing(
+            img_beg)  # dessa forma é sempre feito o preprocessamento EM DOBRO! (Duas vezes na mesma imagem)
         fft_end = image_preprocessing(img_end)  # dessa forma é sempre feito o preprocessamento EM DOBRO!
-
-        return self._estimate_displacement(fft_beg, fft_end)
-
-    def feed_image(self, img: np.ndarray):
-        """
-        Preprocess img for future displacement estimates with estimate_last_displacement()
-        """
-        self.imgs_processed = (self.imgs_processed[1], image_preprocessing(img))
-
-    def estimate_last_displacement(self) -> (float, float):
-        """
-        Estimates the displacement between the last two images passed as arguments to feed_image().
-
-        Raises IndexError: when called before feed_image() is called on two images.
-        """
-        if self.imgs_processed.count(None) > 0:
-            raise IndexError
-
-        fft_beg = self.imgs_processed[0]
-        fft_end = self.imgs_processed[1]
 
         return self._estimate_displacement(fft_beg, fft_end)
 
@@ -75,3 +72,57 @@ class VisualOdometer:
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
         self.current_position = self.current_position[0] + deltax, self.current_position[1] + deltay
         return deltax * self.xres, deltay * self.yres
+
+    def get_displacement(self):
+        if len(self.displacements) > 0:
+            return self.displacements.popleft()
+        else:
+            return None
+
+    def feed_image(self, img: np.ndarray) -> None:
+        # Preprocess an image:
+        self.imgs_processed.append(image_preprocessing(img))
+
+        # Assign an image pair to a worker:
+        if len(self.imgs_processed) >= 2:
+            # Try to assign the job:
+            self._assign_worker()
+
+    def _assign_worker(self):
+        with self.lock:
+            if self.pool:
+                # Grab the oldest pair of frames:
+                img_beg = self.imgs_processed.popleft()
+                img_end = self.imgs_processed[0]
+
+                print("There is an available thread")
+                self.processor = self.pool.pop()
+                self.processor.feed_image(img_beg, img_end)
+                self.processor.start_processing()
+            else:
+                warnings.warn("No available thread for displacement estimation.")
+                self.processor = None
+
+    def _start_pool(self):
+        self.lock = threading.Lock()  # Lock for managing thread pool
+        self.pool = [DisplacementProcessor(self) for i in range(self.num_threads)]
+        self.processor = None
+        self.terminated = False
+
+    def _reset_pool(self):
+        self.terminated = True
+        # Guarantee that all workers returns to the pool:
+        if self.processor:
+            with self.lock:
+                self.pool.append(self.processor)
+                self.processor = None
+
+        # Now, empty the pool, joining each thread as we go
+        while True:
+            with self.lock:
+                try:
+                    processor = self.pool.pop()
+                except IndexError:
+                    break  # pool is empty
+            processor.terminated = True
+            processor.join()
