@@ -27,7 +27,16 @@ try:
     for img in img_stream:
         odometer.feed_image(img)
         time.sleep(1 / fps)
-        # odometer.get_image()
+        # odometer.get_displacement()
 
 finally:
     odometer._reset_pool()
+
+
+# Opção B de uso:
+# with odometer:
+#     time.sleep(.1)
+#     for img in img_stream:
+#         odometer.feed_image(img)
+#         time.sleep(1 / fps)
+#         # odometer.get_displacement()

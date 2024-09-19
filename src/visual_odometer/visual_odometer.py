@@ -23,7 +23,8 @@ class VisualOdometer:
         self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
 
         self.current_position = (0, 0)  # In pixels
-        self.imgs_processed = deque(maxlen=img_buffersize)
+        self.imgs_processed = [None, None]
+        # The first imgs_processed will always be the last successful image used on a displacement estimation. The second img will be the most recent image
 
         #
         self.displacements = deque()
@@ -32,7 +33,7 @@ class VisualOdometer:
     def __enter__(self):
         self._start_pool()
 
-    def __exit__(self):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self._reset_pool()
 
     def calibrate(self, new_xres: float, new_yres: float):
@@ -80,20 +81,26 @@ class VisualOdometer:
             return None
 
     def feed_image(self, img: np.ndarray) -> None:
-        # Preprocess an image:
-        self.imgs_processed.append(image_preprocessing(img))
+        # Update the latest image:
+        if self.imgs_processed[0] is None:
+            # The first iteration
+            self.imgs_processed[0] = image_preprocessing(img)
+        else:
+            # Update the current image:
+            self.imgs_processed[1] = image_preprocessing(img)
 
-        # Assign an image pair to a worker:
-        if len(self.imgs_processed) >= 2:
-            # Try to assign the job:
+            # Assign an image pair to a worker:
             self._assign_worker()
 
     def _assign_worker(self):
         with self.lock:
             if self.pool:
-                # Grab the oldest pair of frames:
-                img_beg = self.imgs_processed.popleft()
-                img_end = self.imgs_processed[0]
+                # Grab the pair of frames:
+                img_beg = self.imgs_processed[0]
+                img_end = self.imgs_processed[1]
+
+                # Update the oldest image:
+                self.imgs_processed[0] = img_end
 
                 print("There is an available thread")
                 self.processor = self.pool.pop()
