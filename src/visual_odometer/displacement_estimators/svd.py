@@ -73,4 +73,4 @@ def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowi
     deltax = svd_estimate_shift(ang_qv, N, phase_windowing)
 
     # round() pois o retorn é em pixels
-    return round(deltax), round(deltay)
+    return deltax, deltay
