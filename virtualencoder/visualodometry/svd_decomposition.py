@@ -1,8 +1,13 @@
 import numpy as np
 from virtualencoder.visualodometry.dsp_utils import crosspower_spectrum, normalize_product, phase_fringe_filter
 from scipy.sparse.linalg import svds
-
 from virtualencoder.visualodometry.image_utils import filter_array_by_maxmin
+
+try:
+    import cupy as cp
+    GPU_AVAILABLE = True
+except ImportError:
+    GPU_AVAILABLE = False
 
 
 def linear_regression(x, y):
@@ -38,12 +43,23 @@ def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     return delta
 
 
-def svd_method(img_beg, img_end, frequency_window="Stone_et_al_2001"):
+def svd_method(img_beg, img_end, frequency_window="Stone_et_al_2001", use_gpu = False):
     M, N = img_beg.shape
     q, Q = crosspower_spectrum(img_end, img_beg, frequency_window)
-    qu, s, qv = svds(Q, k=1)
-    ang_qu = np.angle(qu[:, 0])
-    ang_qv = np.angle(qv[0, :])
+    if use_gpu:
+        if GPU_AVAILABLE:
+            # Usar SVD de Cupy
+            qu, s, qv = cp.linalg.svd(Q, full_matrices=False)
+            # Obter o ângulo dos vetores U e V
+            ang_qu = cp.angle(qu[:, 0])
+            ang_qv = cp.angle(qv[0, :])
+        else:
+            raise Exception("Erro, cupy não está instalado, coloque use_gpu como False ou instale o cupy usando pip install cupy-cuda11x")
+    else:
+        # Usar SVD de CPU (SciPy)
+        qu, s, qv = svds(Q, k=1)
+        ang_qu = np.angle(qu[:, 0])
+        ang_qv = np.angle(qv[0, :])
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
     deltay = svd_estimate_shift(ang_qu, M)
