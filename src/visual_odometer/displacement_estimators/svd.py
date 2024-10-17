@@ -4,6 +4,12 @@ from numpy import ndarray
 from scipy.ndimage import convolve
 from scipy.sparse.linalg import svds
 
+try:
+    import cupy as cp
+    GPU_AVAILABLE = True
+except ImportError:
+    GPU_AVAILABLE = False
+
 def normalize_product(F: ndarray, G: ndarray, method="Stone_et_al_2001") -> ndarray:
     # Versão modificada de crosspower_spectrum() para melhorias de eficiência
 
@@ -56,17 +62,25 @@ def svd_estimate_shift(phase_vec, N, phase_windowing=None):
     delta = mu * N / (2 * np.pi)
     return delta
 
-def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowing=None, finge_filter=True):
+def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowing=None, finge_filter=True, use_gpu = False):
     Q = normalize_product(fft_beg, fft_end)
     if finge_filter is True:
         Q = phase_fringe_filter(Q)
 
-    # Compute the SVD decomposition of the Crosspower Spectrum:
-    qu, s, qv = svds(Q, k=1)
-
-    # Phase operator:
-    ang_qu = np.angle(qu[:, 0])
-    ang_qv = np.angle(qv[0, :])
+    if use_gpu:
+        if GPU_AVAILABLE:
+            # Usar SVD de Cupy
+            qu, s, qv = cp.linalg.svd(Q, full_matrices=False)
+            # Obter o ângulo dos vetores U e V
+            ang_qu = cp.angle(qu[:, 0])
+            ang_qv = cp.angle(qv[0, :])
+        else:
+            raise Exception("Erro, cupy não está instalado, coloque use_gpu como False ou instale o cupy usando pip install cupy-cuda11x")
+    else:
+        # Usar SVD de CPU (SciPy)
+        qu, s, qv = svds(Q, k=1)
+        ang_qu = np.angle(qu[:, 0])
+        ang_qv = np.angle(qv[0, :])
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
     deltay = svd_estimate_shift(ang_qu, M, phase_windowing)
