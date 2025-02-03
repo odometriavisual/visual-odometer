@@ -15,8 +15,13 @@ DEFAULT_CONFIG = {
         "params": {}
     },
     "Spatial Window": {
-        "method": "Blackman-Harris",
-        "params": {}
+        "method": "blackman_harris",
+        "params": {
+            "a0": 0.358,
+            "a1": 0.47,
+            "a2": 0.135,
+            "a3": 0.037,
+        }
     },
     "Downsampling": {
         "method": "",
