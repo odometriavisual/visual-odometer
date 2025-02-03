@@ -10,7 +10,10 @@ def apply_spatial_window(img: ndarray, method: str, params: dict):
             return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'])
         case "raised_cosine":
             return apply_raised_cosine_window(img)
+        case "":
+            return img
         case _:
+            print(f'Atenção: tentando aplicar o método de janelamento de imagem {method}, mas ele não está implementado.')
             return img
 
 
@@ -26,7 +29,10 @@ def apply_downsampling(img: np.ndarray, method: str, params: dict):
             return np.array(img_pil.resize(newsize, Image.BILINEAR))
         case "bicubic":
             return np.array(img_pil.resize(newsize, Image.BICUBIC))
+        case "":
+            return img
         case _:
+            print(f'Atenção: tentando aplicar o método de downsampling {method}, mas ele não está implementado.')
             return img
 
 
@@ -34,7 +40,10 @@ def apply_frequency_window(spectrum: np.ndarray, method: str, params: dict):
     match method:
         case "Stone_et_al_2001":
             return ideal_lowpass(spectrum, params["factor"])
+        case "":
+            return spectrum
         case _:
+            print(f'Atenção: tentando aplicar o método {method}, mas ele não está implementado.')
             return spectrum
 
 
