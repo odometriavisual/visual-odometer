@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import ndarray
 
-from scipy.ndimage import convolve
+from scipy.signal import convolve
 from scipy.sparse.linalg import svds
 
 try:
@@ -21,7 +21,7 @@ def normalize_product(F: ndarray, G: ndarray) -> ndarray:
 
 def phase_fringe_filter(cross_power_spectrum: ndarray, window_size: tuple = (5, 5), threshold: float = 0.03) -> ndarray:
     # Aplica o filtro de média para reduzir o ruído
-    filtered_spectrum = convolve(cross_power_spectrum, np.ones(window_size) / np.prod(window_size), mode='constant')
+    filtered_spectrum = convolve(cross_power_spectrum, np.ones(window_size) / np.prod(window_size), mode='same')  # Alterado de 'constant' para 'same'
 
     # Calcula a diferença entre o espectro original e o filtrado
     diff_spectrum = cross_power_spectrum - filtered_spectrum
