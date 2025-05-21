@@ -62,13 +62,14 @@ class VisualOdometer:
         return self._estimate_displacement(fft_beg, fft_end)
 
     def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
-        match self.configs["Displacement Estimation"]["method"]:
-            case "svd":
-                _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0])  # In pixels
-            case "phase-correlation":
-                raise NotImplementedError
-            case _:
-                raise NotImplementedError
+        method = self.configs["Displacement Estimation"]["method"]
+
+        if method == "svd":
+            _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0])  # In pixels
+        elif method == "phase-correlation":
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
 
         # Convert from pixels to millimeters (or equivalent):
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
