@@ -1,13 +1,22 @@
+from urllib.parse import uses_query
+
 import numpy as np
 import json
 import threading
 
 from .displacement_estimators.svd import svd_method
 from .preprocessing import image_preprocessing
+import time
+
+try:
+    import cupy as cp
+except:
+    pass
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
+        "use_gpu": False,
         "params": {}
     },
     "Frequency Window": {
@@ -59,15 +68,25 @@ class VisualOdometer:
 
         Intendend for single shot usage, for estimating displacements between sequences of images use estimate_last_displacement().
         """
-        fft_beg = image_preprocessing(img_beg, self.configs)
-        fft_end = image_preprocessing(img_end, self.configs)
+
+        if cp:
+            use_gpu = isinstance(img_beg, cp.ndarray)
+        else:
+            use_gpu = False
+
+        fft_beg = image_preprocessing(img_beg, self.configs, use_gpu=use_gpu)
+        fft_end = image_preprocessing(img_end, self.configs, use_gpu=use_gpu)
         return self._estimate_displacement(fft_beg, fft_end)
 
     def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
+        if cp:
+            use_gpu = isinstance(fft_beg, cp.ndarray)
+        else:
+            use_gpu = False
 
         if method == "svd":
-            _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0])  # In pixels
+            _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], use_gpu=use_gpu)  # In pixels
         elif method == "phase-correlation":
             raise NotImplementedError
         else:

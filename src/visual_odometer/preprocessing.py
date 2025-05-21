@@ -3,8 +3,12 @@ from numpy.fft import fft2, fftshift
 from PIL import Image
 from .dsp import *
 
+try:
+    import cupy as cp
+except:
+    pass
 
-def apply_spatial_window(img: ndarray, method: str, params: dict):
+def apply_spatial_window(img, method: str, params: dict):
     if method == "blackman_harris":
         return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'])
     elif method == "raised_cosine":
@@ -46,27 +50,37 @@ def apply_frequency_window(spectrum: np.ndarray, method: str, params: dict):
 
 # Function which applies all the preprocessing:
 
-def image_preprocessing(img: np.ndarray, configs: dict):
+def image_preprocessing(img, configs: dict, use_gpu = False):
     # Apply downsampling:
-    img = apply_downsampling(
-        img,
-        method=configs["Downsampling"]["method"],
-        params=configs["Downsampling"]["params"]
-    )
+    # img = apply_downsampling(
+    #     img,
+    #     method=configs["Downsampling"]["method"],
+    #     params=configs["Downsampling"]["params"]
+    # )
 
     # Apply spatial windowing:
-    img = apply_spatial_window(
-        img,
-        method=configs["Spatial Window"]["method"],
-        params=configs["Spatial Window"]["params"]
-    )
+    # img = apply_spatial_window(
+    #     img,
+    #     method=configs["Spatial Window"]["method"],
+    #     params=configs["Spatial Window"]["params"]
+    # )
 
-    # Apply FFT:
-    img_spectrum = fftshift(fft2(img))
-    img_spectrum = apply_frequency_window(
-        img_spectrum,
-        method=configs["Frequency Window"]["method"],
-        params=configs["Frequency Window"]["params"]
-    )
-
+    if use_gpu is True:
+        # Apply FFT:
+        #img_gpu = cp.asarray(img)
+        #print(img_gpu.shape)
+        img_spectrum = cp.fft.fftshift(cp.fft.fft2(img))
+        # img_spectrum = apply_frequency_window(
+        #     img_spectrum,
+        #     method=configs["Frequency Window"]["method"],
+        #     params=configs["Frequency Window"]["params"]
+        # )
+    else:
+        #print(img.shape)
+        img_spectrum = fftshift(fft2(img))
+        # img_spectrum = apply_frequency_window(
+        #     img_spectrum,
+        #     method=configs["Frequency Window"]["method"],
+        #     params=configs["Frequency Window"]["params"]
+        # )
     return img_spectrum

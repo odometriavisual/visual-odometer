@@ -1,32 +1,46 @@
 from visual_odometer import VisualOdometer
 import time
+from PIL import Image, ImageOps
+import numpy as np
 
-def load(filename):
-    from PIL import Image, ImageOps
-    import numpy as np
+use_gpu = True
 
+try:
+    import cupy as cp
+except:
+    pass
+
+def load_img(filename):
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
-    img_array = np.asarray(img_grayscale)
+    return img_grayscale
 
-    return img_array
+grayscale_img0 = load_img('./img.png')  # image at t = t₀
+grayscale_img1 = load_img('./img_translated.png') # image at t = t₀ + Δt
 
-
-img0 = load('./img.png')  # image at t = t₀
-img1 = load('./img_translated.png')  # image at t = t₀ + Δt
+if use_gpu:
+    img0 = cp.asarray(grayscale_img0)
+    img1 = cp.asarray(grayscale_img1)
+else:
+    img0 = np.asarray(grayscale_img0)
+    img1 = np.asarray(grayscale_img1)
 
 stream_size = 100
 img_stream = [img0, img1] * stream_size
 
 odometer = VisualOdometer(img_size=(640, 480))
-fps = 60
+odometer.feed_image(img0)
+odometer.get_displacement()
+odometer.feed_image(img1)
+odometer.get_displacement()
 
 time.sleep(1)
 
 t0 = time.time()
+
 for img in img_stream:
+    #load_as_cpu_img('./img.png')
     odometer.feed_image(img)
-    time.sleep(1 / fps)
     odometer.get_displacement()
 delta_t = time.time() - t0
 
