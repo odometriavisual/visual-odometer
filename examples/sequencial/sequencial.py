@@ -25,7 +25,7 @@ time.sleep(1)
 
 t0 = time.time()
 for img in img_stream:
-    odometer.feed_image(img, 2)
+    odometer.feed_image(img)
     time.sleep(1 / fps)
     odometer.get_displacement()
 delta_t = time.time() - t0
