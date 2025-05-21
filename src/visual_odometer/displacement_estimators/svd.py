@@ -6,17 +6,18 @@ from scipy.sparse.linalg import svds
 
 try:
     import cupy as cp
-    GPU_AVAILABLE = True
-except ImportError:
-    GPU_AVAILABLE = False
+except:
+    pass
 
-
-def normalize_product(F: ndarray, G: ndarray) -> ndarray:
-    # Versão modificada de crosspower_spectrum() para melhorias de eficiência
-
-    Q = F * np.conj(G) / np.abs(F * np.conj(G))
-    return Q
-
+def normalize_product(F, G, use_gpu=False):
+    if use_gpu:
+        Q = F * cp.conj(G)
+        Q /= cp.abs(Q)
+        return Q
+    else:
+        Q = F * np.conj(G)
+        Q /= np.abs(Q)
+        return Q
 
 def phase_fringe_filter(cross_power_spectrum: ndarray, window_size: tuple = (5, 5), threshold: float = 0.03) -> ndarray:
     # Aplica o filtro de média para reduzir o ruído
@@ -49,50 +50,75 @@ def phase_unwrapping(phase_vec: ndarray, factor: float = 0.7) -> ndarray:
     return np.cumsum(corrected_difference)
 
 
-def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None) -> float:
-    # Phase unwrapping:
-    phase_unwrapped = phase_unwrapping(phase_vec)
-    r = np.arange(0, phase_unwrapped.size)
+def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None, use_gpu=False) -> float:
+    if use_gpu:
+        xp = cp
+    else:
+        xp = np
+
+
+    phase_unwrapped = xp.unwrap(phase_vec)
+    r = xp.arange(0, phase_unwrapped.size)
     M = r.size // 2
-    if phase_windowing is None or phase_windowing == False:
-        x = r
-        y = phase_unwrapped
-    elif phase_windowing == "central":
+
+    if phase_windowing == "central":
         x = r[M - 50:M + 50]
         y = phase_unwrapped[M - 50:M + 50]
     elif phase_windowing == "initial":
         x = r[M - 80:M - 10]
         y = phase_unwrapped[M - 80:M - 10]
-    mu, c = linear_regression(x, y)
-    delta = mu * N / (2 * np.pi)
-    return delta
+    else:
+        x = r
+        y = phase_unwrapped
+
+    x_mean = xp.mean(x)
+    y_mean = xp.mean(y)
+    mu = xp.sum((x - x_mean) * (y - y_mean)) / xp.sum((x - x_mean) ** 2)
+    delta = mu * N / (2 * xp.pi)
+
+    return float(delta.get()) if use_gpu else float(delta)
 
 
-def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowing=None, finge_filter=True,
-               use_gpu=True) -> (float, float):
-    Q = normalize_product(fft_beg, fft_end)
-    if finge_filter is True:
-        Q = phase_fringe_filter(Q)
+def truncated_svd_gpu(A, k=1):
+    # Método da potência para o maior valor singular
+    m, n = A.shape
+    x = cp.random.randn(n)
+    x = x / cp.linalg.norm(x)
+
+    for _ in range(10):  # iterações
+        y = A @ x
+        x = A.T @ y
+        x = x / cp.linalg.norm(x)
+
+    v = x.reshape(-1, 1)
+    u = A @ v
+    s = cp.linalg.norm(u)
+    u = u / s
+
+    return u, s, v.T
+
+def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_filter=True,
+               use_gpu=False) -> (float, float):
+
+    Q = normalize_product(fft_beg, fft_end, use_gpu=use_gpu)
+
+    #if finge_filter is True:
+        #Q = phase_fringe_filter(Q)
 
     if use_gpu:
-        if GPU_AVAILABLE:
-            # Usar SVD de Cupy
-            qu, s, qv = cp.linalg.svd(Q, full_matrices=False)
-            # Obter o ângulo dos vetores U e V
-            ang_qu = cp.angle(qu[:, 0])
-            ang_qv = cp.angle(qv[0, :])
-        else:
-            raise NotImplementedError(
-                "Erro, cupy não está instalado, coloque use_gpu como False ou instale o cupy usando pip install cupy-cuda11x")
+        qu, s, qv = truncated_svd_gpu(Q, k=1)
+        ang_qu = cp.angle(qu[:, 0])
+        ang_qv = cp.angle(qv[0, :])
     else:
-        # Usar SVD de CPU (SciPy)
+        print(Q.shape)
         qu, s, qv = svds(Q, k=1)
         ang_qu = np.angle(qu[:, 0])
         ang_qv = np.angle(qv[0, :])
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltay = svd_estimate_shift(ang_qu, M, phase_windowing)
-    deltax = svd_estimate_shift(ang_qv, N, phase_windowing)
 
-    # round() pois o retorn é em pixels
+
+    deltay = svd_estimate_shift(ang_qu, M, phase_windowing, use_gpu)
+    deltax = svd_estimate_shift(ang_qv, N, phase_windowing, use_gpu)
+
     return deltax, deltay
