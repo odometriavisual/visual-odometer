@@ -11,8 +11,10 @@ DEFAULT_CONFIG = {
         "params": {}
     },
     "Frequency Window": {
-        "method": "Stone et al 2007",
-        "params": {}
+        "method": "Stone_et_al_2001",
+        "params": {
+            "factor": 0.6,
+        }
     },
     "Spatial Window": {
         "method": "blackman_harris",
