@@ -6,7 +6,6 @@ from scipy.sparse.linalg import svds
 
 try:
     import cupy as cp
-
     GPU_AVAILABLE = True
 except ImportError:
     GPU_AVAILABLE = False
@@ -70,7 +69,7 @@ def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None) -> floa
 
 
 def svd_method(fft_beg: ndarray, fft_end: ndarray, M: int, N: int, phase_windowing=None, finge_filter=True,
-               use_gpu=False) -> (float, float):
+               use_gpu=True) -> (float, float):
     Q = normalize_product(fft_beg, fft_end)
     if finge_filter is True:
         Q = phase_fringe_filter(Q)
