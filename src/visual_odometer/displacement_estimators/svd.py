@@ -2,7 +2,8 @@ import numpy as np
 from numpy import ndarray
 
 from scipy.signal import convolve
-from scipy.sparse.linalg import svds
+from scipy.sparse.linalg import svds as svds_cpu
+from cupyx.scipy.sparse.linalg import svds as svds_gpu
 
 try:
     import cupy as cp
@@ -78,24 +79,18 @@ def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None, use_gpu
 
     return float(delta.get()) if use_gpu else float(delta)
 
-
-def truncated_svd_gpu(A, k=1):
-    # Método da potência para o maior valor singular
+def randomized_svd_gpu(A, k=1, n_iter=20):
     m, n = A.shape
-    x = cp.random.randn(n)
-    x = x / cp.linalg.norm(x)
+    G = cp.random.randn(n, k)
+    Y = A @ G
+    for _ in range(n_iter):
+        Y = A @ (A.T @ Y)
+    Q, _ = cp.linalg.qr(Y)
+    B = Q.T @ A
+    U_hat, S, Vt = cp.linalg.svd(B, full_matrices=False)
+    U = Q @ U_hat
+    return U[:, :k], S[:k], Vt[:k, :]
 
-    for _ in range(10):  # iterações
-        y = A @ x
-        x = A.T @ y
-        x = x / cp.linalg.norm(x)
-
-    v = x.reshape(-1, 1)
-    u = A @ v
-    s = cp.linalg.norm(u)
-    u = u / s
-
-    return u, s, v.T
 
 def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_filter=True,
                use_gpu=False) -> (float, float):
@@ -106,12 +101,12 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_fil
         #Q = phase_fringe_filter(Q)
 
     if use_gpu:
-        qu, s, qv = truncated_svd_gpu(Q, k=1)
+        qu, s, qv = svds_gpu(Q, k=1)
         ang_qu = cp.angle(qu[:, 0])
         ang_qv = cp.angle(qv[0, :])
     else:
         print(Q.shape)
-        qu, s, qv = svds(Q, k=1)
+        qu, s, qv = svds_cpu(Q, k=1)
         ang_qu = np.angle(qu[:, 0])
         ang_qv = np.angle(qv[0, :])
 
