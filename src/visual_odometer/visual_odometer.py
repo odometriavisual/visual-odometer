@@ -123,9 +123,14 @@ class VisualOdometer:
         except NotImplementedError:
             return None, None
 
-    def feed_image(self, img: np.ndarray) -> None:
+    def feed_image(self, img) -> None:
         # Update the latest image:
-        img_spectrum = image_preprocessing(img, self.configs)
+        if cp:
+            use_gpu = isinstance(img, cp.ndarray)
+        else:
+            use_gpu = False
+
+        img_spectrum = image_preprocessing(img, self.configs, use_gpu=use_gpu)
 
         if self.imgs_processed[0] is None:
             # The first iteration

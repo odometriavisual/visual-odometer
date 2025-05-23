@@ -4,10 +4,10 @@ from PIL import Image, ImageOps
 import numpy as np
 
 use_gpu = True
-
 try:
     import cupy as cp
 except:
+    use_gpu = False
     pass
 
 def load_img(filename):
