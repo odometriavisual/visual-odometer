@@ -1,24 +1,23 @@
-
 try:
-    import cupy as xp
-    gpu_enabled = True
-except ImportError:
-    import numpy as xp
-    gpu_enabled = False
+    import cupy as cp
+except:
+    pass
+import numpy as np
 
 # Frequency Windows:
 
-def ideal_lowpass(I, factor: float = 0.6):
+def ideal_lowpass(I, factor: float = 0.6, use_gpu=False):
     m = factor * I.shape[0] / 2
     n = factor * I.shape[1] / 2
-    N = xp.min(xp.array([m, n]))
 
-    if gpu_enabled:
-        N_val = int(N.get().item())  # cupy array to int
-        I_cropped = I[int(I.shape[0] // 2 - N_val): int(I.shape[0] // 2 + N_val),
+    if use_gpu:
+        N = cp.min(cp.array([m, n]))
+        N_val = int(N)
+        #N_val = int(N.get().item())  # cupy array to int
+        I = I[int(I.shape[0] // 2 - N_val): int(I.shape[0] // 2 + N_val),
                     int(I.shape[1] // 2 - N_val): int(I.shape[1] // 2 + N_val)]
-        I = xp.array(I_cropped)
     else:
+        N = np.min(cp.array([m, n]))
         N_val = int(N)
         I = I[int(I.shape[0] // 2 - N_val): int(I.shape[0] // 2 + N_val),
             int(I.shape[1] // 2 - N_val): int(I.shape[1] // 2 + N_val)]
@@ -27,8 +26,12 @@ def ideal_lowpass(I, factor: float = 0.6):
 
 # Spatial Windows:
 
-def apply_raised_cosine_window(image):
+def apply_raised_cosine_window(image, use_gpu = False):
     rows, cols = image.shape
+    if use_gpu:
+        xp = cp
+    else:
+        xp = np
     i = xp.arange(rows)
     j = xp.arange(cols)
     window = 0.5 * (1 + xp.cos(xp.pi * (2 * i[:, None] - rows) / rows)) * \
@@ -36,7 +39,11 @@ def apply_raised_cosine_window(image):
     return image * window
 
 
-def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float):
+def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float, use_gpu=False):
+    if use_gpu:
+        xp = cp
+    else:
+        xp = np
     n = xp.arange(size)
     window = (a0
               - a1 * xp.cos(2 * xp.pi * n / (size - 1))
@@ -47,9 +54,15 @@ def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float
 
 def apply_blackman_harris_window(image,
                                  a0: float = 0.35875, a1: float = 0.48829,
-                                 a2: float = 0.14128, a3: float = 0.01168):
+                                 a2: float = 0.14128, a3: float = 0.01168,
+                                 use_gpu = False):
+    if use_gpu:
+        xp = cp
+    else:
+        xp = np
+
     height, width = image.shape
-    window_row = blackman_harris_window(width, a0, a1, a2, a3)
-    window_col = blackman_harris_window(height, a0, a1, a2, a3)
+    window_row = blackman_harris_window(width, a0, a1, a2, a3, use_gpu=use_gpu)
+    window_col = blackman_harris_window(height, a0, a1, a2, a3, use_gpu=use_gpu)
     image_windowed = xp.outer(window_col, window_row) * image
     return image_windowed

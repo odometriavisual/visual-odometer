@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.fft import fft2, fftshift
 from PIL import Image
 from .dsp import *
 
@@ -8,11 +7,11 @@ try:
 except:
     pass
 
-def apply_spatial_window(img, method: str, params: dict):
+def apply_spatial_window(img, method: str, params: dict, use_gpu=False):
     if method == "blackman_harris":
-        return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'])
+        return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'], use_gpu=use_gpu)
     elif method == "raised_cosine":
-        return apply_raised_cosine_window(img)
+        return apply_raised_cosine_window(img, use_gpu)
     elif method == "":
         return img
     else:
@@ -20,7 +19,13 @@ def apply_spatial_window(img, method: str, params: dict):
         return img
 
 
-def apply_downsampling(img: np.ndarray, method: str, params: dict):
+def apply_downsampling(img, method: str, params: dict, use_gpu=False):
+    if method == "" or method == None:
+        return img
+    elif use_gpu:
+        print("Downsampling on gpu is not implemented")
+        return img
+
     factor = params["factor"]
     newsize = int(img.shape[0] / factor), int(img.shape[1] / factor)
     img_pil = Image.fromarray(img)
@@ -31,10 +36,7 @@ def apply_downsampling(img: np.ndarray, method: str, params: dict):
         return np.array(img_pil.resize(newsize, Image.BILINEAR))
     elif method == "bicubic":
         return np.array(img_pil.resize(newsize, Image.BICUBIC))
-    elif method == "":
-        return img
     else:
-        print(f'Atenção: tentando aplicar o método de downsampling {method}, mas ele não está implementado.')
         return img
 
 
@@ -52,35 +54,33 @@ def apply_frequency_window(spectrum: np.ndarray, method: str, params: dict):
 
 def image_preprocessing(img, configs: dict, use_gpu = False):
     # Apply downsampling:
-    # img = apply_downsampling(
-    #     img,
-    #     method=configs["Downsampling"]["method"],
-    #     params=configs["Downsampling"]["params"]
-    # )
+    img = apply_downsampling(
+        img,
+        method=configs["Downsampling"]["method"],
+        params=configs["Downsampling"]["params"],
+        use_gpu=use_gpu
+    )
 
-    # Apply spatial windowing:
-    # img = apply_spatial_window(
-    #     img,
-    #     method=configs["Spatial Window"]["method"],
-    #     params=configs["Spatial Window"]["params"]
-    # )
+    #Apply spatial windowing:
+    img = apply_spatial_window(
+        img,
+        method=configs["Spatial Window"]["method"],
+        params=configs["Spatial Window"]["params"],
+        use_gpu=use_gpu
+    )
 
     if use_gpu is True:
-        # Apply FFT:
-        #img_gpu = cp.asarray(img)
-        #print(img_gpu.shape)
         img_spectrum = cp.fft.fftshift(cp.fft.fft2(img))
-        # img_spectrum = apply_frequency_window(
-        #     img_spectrum,
-        #     method=configs["Frequency Window"]["method"],
-        #     params=configs["Frequency Window"]["params"]
-        # )
+        img_spectrum = apply_frequency_window(
+            img_spectrum,
+            method=configs["Frequency Window"]["method"],
+            params=configs["Frequency Window"]["params"]
+        )
     else:
-        #print(img.shape)
-        img_spectrum = fftshift(fft2(img))
-        # img_spectrum = apply_frequency_window(
-        #     img_spectrum,
-        #     method=configs["Frequency Window"]["method"],
-        #     params=configs["Frequency Window"]["params"]
-        # )
+        img_spectrum = np.fft.fftshift(np.fft.fft2(img))
+        img_spectrum = apply_frequency_window(
+            img_spectrum,
+            method=configs["Frequency Window"]["method"],
+            params=configs["Frequency Window"]["params"]
+        )
     return img_spectrum
