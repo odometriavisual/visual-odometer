@@ -66,3 +66,32 @@ def apply_blackman_harris_window(image,
     window_col = blackman_harris_window(height, a0, a1, a2, a3, use_gpu=use_gpu)
     image_windowed = xp.outer(window_col, window_row) * image
     return image_windowed
+
+def crop_two_imgs_with_displacement(imgA, imgB, dx, dy):
+    h, w = imgA.shape
+
+    # Corte no eixo x (invertido)
+    if dx > 0:
+        imgA = imgA[:, :w - dx]
+        imgB = imgB[:, dx:]
+    elif dx < 0:
+        dx = abs(dx)
+        imgA = imgA[:, dx:]
+        imgB = imgB[:, :w - dx]
+
+    # Corte no eixo y (invertido)
+    if dy > 0:
+        imgA = imgA[:h - dy, :]
+        imgB = imgB[dy:, :]
+    elif dy < 0:
+        dy = abs(dy)
+        imgA = imgA[dy:, :]
+        imgB = imgB[:h - dy, :]
+
+    # Garante que as imagens finais tenham o mesmo tamanho
+    min_h = min(imgA.shape[0], imgB.shape[0])
+    min_w = min(imgA.shape[1], imgB.shape[1])
+    imgA = imgA[:min_h, :min_w]
+    imgB = imgB[:min_h, :min_w]
+
+    return imgA, imgB

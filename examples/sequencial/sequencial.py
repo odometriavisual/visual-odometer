@@ -3,7 +3,7 @@ import time
 from PIL import Image, ImageOps
 import numpy as np
 
-use_gpu = True
+use_gpu = False
 try:
     import cupy as cp
 except:
