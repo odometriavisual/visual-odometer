@@ -6,6 +6,7 @@ import threading
 
 from .displacement_estimators.svd import svd_method
 from .preprocessing import image_preprocessing
+from .dsp import crop_two_imgs_with_displacement
 import time
 
 try:
@@ -16,8 +17,9 @@ except:
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
-        "use_gpu": False,
-        "params": {}
+        "use_gpu": True,
+        "params": {},
+        "reprocess_displacement":True,
     },
     "Frequency Window": {
         "method": "Stone_et_al_2001",
@@ -26,7 +28,7 @@ DEFAULT_CONFIG = {
         }
     },
     "Spatial Window": {
-        "method": "blackman_harris",
+        "method": "raised_cosine",
         "params": {
             "a0": 0.358,
             "a1": 0.47,
@@ -56,6 +58,8 @@ class VisualOdometer:
 
         self.imgs_lock = threading.Lock()
         self.imgs_processed = [None, None]
+        self.imgs_original = [None, None]
+
         # The first img in imgs_processed will always be the last successful image used on a displacement estimation.
         # The second img will be the most recent image
 
@@ -74,19 +78,26 @@ class VisualOdometer:
         else:
             use_gpu = False
 
+        img_x_size = img_beg.shape[1]
+        img_y_size = img_end.shape[0]
+
         fft_beg = image_preprocessing(img_beg, self.configs, use_gpu=use_gpu)
         fft_end = image_preprocessing(img_end, self.configs, use_gpu=use_gpu)
-        return self._estimate_displacement(fft_beg, fft_end)
+        return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
 
-    def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
+    def _estimate_displacement(self, fft_beg, fft_end, img_size_x = None, img_size_y = None) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
         if cp:
             use_gpu = isinstance(fft_beg, cp.ndarray)
         else:
             use_gpu = False
 
+        if img_size_x is None:
+            img_size_x = self.img_size[1]
+            img_size_y = self.img_size[0]
+
         if method == "svd":
-            _deltax, _deltay = svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], use_gpu=use_gpu)  # In pixels
+            _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y, use_gpu=use_gpu)  # In pixels
         elif method == "phase-correlation":
             raise NotImplementedError
         else:
@@ -99,17 +110,27 @@ class VisualOdometer:
 
     def get_displacement(self):
         try:
+            reprocess_displacement = self.configs["Displacement Estimation"]["reprocess_displacement"]
             if None is not self.imgs_processed[0] and None is not self.imgs_processed[1]:
                 # Compute the displacement:
                 spectrum_beg = self.imgs_processed[0]
+                original_img_beg = self.imgs_original[0]
 
                 with self.imgs_lock:
                     spectrum_end = self.imgs_processed[1].copy()
+                    original_img_end = self.imgs_original[1].copy()
                     # Update the image buffer:
 
                 self.imgs_processed[0] = spectrum_end
+                self.imgs_original[0] = original_img_end
 
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
+                if reprocess_displacement:
+                    round_dx = int(round(displacement[0]))
+                    round_dy = int(round(displacement[1]))
+                    crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end, round_dx, round_dy)
+                    new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
+                    displacement = [round_dx + new_displacement[0], round_dy+new_displacement[1]]
 
                 # Update the current position:
                 self.current_position[0] += displacement[0]
@@ -135,11 +156,13 @@ class VisualOdometer:
         if self.imgs_processed[0] is None:
             # The first iteration
             self.imgs_processed[0] = img_spectrum
+            self.imgs_original[0] = img
         else:
             # Update the current image:
             new_img = img_spectrum
             with self.imgs_lock:
                 self.imgs_processed[1] = new_img
+                self.imgs_original[1] = img
 
     def _config(self, arg1: str, arg2: str, arg3: dict):
         self.configs[arg1]["method"] = arg2

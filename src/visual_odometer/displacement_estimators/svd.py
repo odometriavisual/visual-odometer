@@ -57,7 +57,6 @@ def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None, use_gpu
     else:
         xp = np
 
-
     phase_unwrapped = xp.unwrap(phase_vec)
     r = xp.arange(0, phase_unwrapped.size)
     M = r.size // 2
@@ -99,13 +98,11 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_fil
 
     #if finge_filter is True:
         #Q = phase_fringe_filter(Q)
-
     if use_gpu:
-        qu, s, qv = svds_gpu(Q, k=1)
+        qu, s, qv = randomized_svd_gpu(Q, k=1)
         ang_qu = cp.angle(qu[:, 0])
         ang_qv = cp.angle(qv[0, :])
     else:
-        print(Q.shape)
         qu, s, qv = svds_cpu(Q, k=1)
         ang_qu = np.angle(qu[:, 0])
         ang_qv = np.angle(qv[0, :])
