@@ -5,15 +5,6 @@ from scipy.signal import convolve
 from scipy.sparse.linalg import svds as svds_cpu
 from cupyx.scipy.sparse.linalg import svds as svds_gpu
 
-# plt.ion()
-# fig, ax = plt.subplots()
-# line, = ax.plot([], [], label="ang_qu")
-# ax.set_title("Fase de qu (ang_qu)")
-# ax.set_xlabel("Índice")
-# ax.set_ylabel("Fase (radianos)")
-# ax.legend()
-# plt.show()
-
 try:
     import cupy as cp
 except:
@@ -123,3 +114,5 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_fil
     deltax = svd_estimate_shift(ang_qv, N, phase_windowing, use_gpu)
 
     return deltax, deltay
+
+

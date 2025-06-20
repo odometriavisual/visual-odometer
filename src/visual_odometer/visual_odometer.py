@@ -5,6 +5,7 @@ import json
 import threading
 
 from .displacement_estimators.svd import svd_method
+from .displacement_estimators.phase_correlation import  phase_correlation_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
 import time
@@ -16,12 +17,12 @@ except:
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
-        "method": "svd",
+        "method": "phase-correlation",
         "use_gpu": False,
         "reprocess_displacement":True,
         "skip_frames": True,
         "params": {
-            "skip_frames_threshold": 10,
+            "skip_frames_threshold": 5,
         },
 
     },
@@ -103,7 +104,7 @@ class VisualOdometer:
         if method == "svd":
             _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y, use_gpu=use_gpu)  # In pixels
         elif method == "phase-correlation":
-            raise NotImplementedError
+            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end, use_gpu=use_gpu)
         else:
             raise NotImplementedError
 
