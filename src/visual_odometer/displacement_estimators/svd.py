@@ -5,6 +5,15 @@ from scipy.signal import convolve
 from scipy.sparse.linalg import svds as svds_cpu
 from cupyx.scipy.sparse.linalg import svds as svds_gpu
 
+# plt.ion()
+# fig, ax = plt.subplots()
+# line, = ax.plot([], [], label="ang_qu")
+# ax.set_title("Fase de qu (ang_qu)")
+# ax.set_xlabel("Índice")
+# ax.set_ylabel("Fase (radianos)")
+# ax.legend()
+# plt.show()
+
 try:
     import cupy as cp
 except:

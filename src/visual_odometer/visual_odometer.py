@@ -17,9 +17,13 @@ except:
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
-        "use_gpu": True,
-        "params": {},
+        "use_gpu": False,
         "reprocess_displacement":True,
+        "skip_frames": True,
+        "params": {
+            "skip_frames_threshold": 10,
+        },
+
     },
     "Frequency Window": {
         "method": "Stone_et_al_2001",
@@ -111,36 +115,42 @@ class VisualOdometer:
     def get_displacement(self):
         try:
             reprocess_displacement = self.configs["Displacement Estimation"]["reprocess_displacement"]
-            if None is not self.imgs_processed[0] and None is not self.imgs_processed[1]:
-                # Compute the displacement:
+            skip_frames = self.configs["Displacement Estimation"]["skip_frames"]
+
+            if self.imgs_processed[0] is not None and self.imgs_processed[1] is not None:
                 spectrum_beg = self.imgs_processed[0]
                 original_img_beg = self.imgs_original[0]
 
                 with self.imgs_lock:
                     spectrum_end = self.imgs_processed[1].copy()
                     original_img_end = self.imgs_original[1].copy()
-                    # Update the image buffer:
 
-                self.imgs_processed[0] = spectrum_end
-                self.imgs_original[0] = original_img_end
-
+                # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
                 if reprocess_displacement:
                     round_dx = int(round(displacement[0]))
                     round_dy = int(round(displacement[1]))
                     crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end, round_dx, round_dy)
                     new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
-                    displacement = [round_dx + new_displacement[0], round_dy+new_displacement[1]]
+                    displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
 
-                # Update the current position:
+                if skip_frames:
+                    threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
+                    if np.linalg.norm(displacement) < threshold:
+                        # Não atualiza a imagem base (mantém img_beg)
+                        return 0.0, 0.0
+
+                # Atualiza img base apenas se deslocamento foi aceito
+                self.imgs_processed[0] = spectrum_end
+                self.imgs_original[0] = original_img_end
+
                 self.current_position[0] += displacement[0]
                 self.current_position[1] += displacement[1]
-
                 self.number_of_displacements += 1
 
                 return displacement
             else:
-                return 0, 0
+                return 0.0, 0.0
         except NotImplementedError:
             return None, None
 
