@@ -23,6 +23,7 @@ DEFAULT_CONFIG = {
         "skip_frames": True,
         "params": {
             "skip_frames_threshold": 5,
+            "reprocess_displacement_count": 2
         },
 
     },
@@ -129,11 +130,14 @@ class VisualOdometer:
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
                 if reprocess_displacement:
-                    round_dx = int(round(displacement[0]))
-                    round_dy = int(round(displacement[1]))
-                    crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end, round_dx, round_dy)
-                    new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
-                    displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
+                    count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
+                    for _ in range(count):
+                        round_dx = int(round(displacement[0]))
+                        round_dy = int(round(displacement[1]))
+                        crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end,
+                                                                                     round_dx, round_dy)
+                        new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
+                        displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]

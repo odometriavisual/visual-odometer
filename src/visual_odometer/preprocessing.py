@@ -9,10 +9,10 @@ except:
 
 def apply_spatial_window(img, method: str, params: dict, use_gpu=False):
     if method == "blackman_harris":
-        return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'], use_gpu=use_gpu)
+        return apply_blackman_harris_window(img, params['a0'], params['a1'], params['a2'], params['a3'], use_gpu=use_gpu).astype(np.float32)
     elif method == "raised_cosine":
-        return apply_raised_cosine_window(img, use_gpu)
-    elif method == "":
+        return apply_raised_cosine_window(img, use_gpu).astype(np.float32)
+    elif method == "" or method == None:
         return img
     else:
         print(f'Atenção: tentando aplicar o método de janelamento de imagem {method}, mas ele não está implementado.')
