@@ -10,7 +10,7 @@ def phase_correlation_method(fft_beg, fft_end, use_gpu=False):
 
     # Cross-power spectrum
     R = fft_end * xp.conj(fft_beg)
-    R /= xp.abs(R) + 1e-8  # evitar divisão por zero
+    R /= xp.abs(R)   # evitar divisão por zero
     # Correlation (FFT inversa)
     corr = xp.fft.ifft2(R)
     corr = xp.fft.fftshift(corr)  # centraliza o pico
