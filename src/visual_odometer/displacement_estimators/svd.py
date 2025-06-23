@@ -3,10 +3,10 @@ from numpy import ndarray
 
 from scipy.signal import convolve
 from scipy.sparse.linalg import svds as svds_cpu
-from cupyx.scipy.sparse.linalg import svds as svds_gpu
 
 try:
     import cupy as cp
+    from cupyx.scipy.sparse.linalg import svds as svds_gpu
 except:
     pass
 

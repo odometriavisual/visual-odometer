@@ -1,7 +1,7 @@
 try:
     import cupy as cp
 except:
-    pass
+    cp = None
 import numpy as np
 
 # Frequency Windows:
@@ -17,7 +17,7 @@ def ideal_lowpass(I, factor: float = 0.6, use_gpu=False):
         I = I[int(I.shape[0] // 2 - N_val): int(I.shape[0] // 2 + N_val),
                     int(I.shape[1] // 2 - N_val): int(I.shape[1] // 2 + N_val)]
     else:
-        N = np.min(cp.array([m, n]))
+        N = np.min(np.array([m, n]))
         N_val = int(N)
         I = I[int(I.shape[0] // 2 - N_val): int(I.shape[0] // 2 + N_val),
             int(I.shape[1] // 2 - N_val): int(I.shape[1] // 2 + N_val)]

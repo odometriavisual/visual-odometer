@@ -12,8 +12,8 @@ import time
 
 try:
     import cupy as cp
-except:
-    pass
+except ImportError:
+    cp = None
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
@@ -79,7 +79,7 @@ class VisualOdometer:
         Intendend for single shot usage, for estimating displacements between sequences of images use estimate_last_displacement().
         """
 
-        if cp:
+        if cp is not None:
             use_gpu = isinstance(img_beg, cp.ndarray)
         else:
             use_gpu = False
@@ -93,7 +93,8 @@ class VisualOdometer:
 
     def _estimate_displacement(self, fft_beg, fft_end, img_size_x = None, img_size_y = None) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
-        if cp:
+
+        if cp is not None:
             use_gpu = isinstance(fft_beg, cp.ndarray)
         else:
             use_gpu = False
@@ -161,7 +162,7 @@ class VisualOdometer:
 
     def feed_image(self, img) -> None:
         # Update the latest image:
-        if cp:
+        if cp is not None:
             use_gpu = isinstance(img, cp.ndarray)
         else:
             use_gpu = False
