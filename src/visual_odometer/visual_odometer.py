@@ -17,13 +17,13 @@ except ImportError:
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
-        "method": "phase-correlation",
+        "method": "svd",
         "use_gpu": False,
         "reprocess_displacement":True,
-        "skip_frames": True,
+        "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
-            "reprocess_displacement_count": 2
+            "reprocess_displacement_count": 3
         },
 
     },
@@ -130,6 +130,7 @@ class VisualOdometer:
 
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
+                print(displacement)
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
                     for _ in range(count):
@@ -139,6 +140,7 @@ class VisualOdometer:
                                                                                      round_dx, round_dy)
                         new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
                         displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
+                        print(displacement)
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
