@@ -2,7 +2,7 @@ import numpy as np
 try:
     import cupy as cp
 except:
-    pass
+    cp = None
 
 
 def phase_correlation_method(fft_beg, fft_end, use_gpu=False):

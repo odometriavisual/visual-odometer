@@ -5,7 +5,7 @@ from .dsp import *
 try:
     import cupy as cp
 except:
-    pass
+    cp = None
 
 def apply_spatial_window(img, method: str, params: dict, use_gpu=False):
     if method == "blackman_harris":
