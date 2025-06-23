@@ -108,10 +108,8 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_fil
         ang_qv = np.angle(qv[0, :])
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-
-
-    deltay = svd_estimate_shift(ang_qu, M, phase_windowing, use_gpu)
-    deltax = svd_estimate_shift(ang_qv, N, phase_windowing, use_gpu)
+    deltax = svd_estimate_shift(ang_qv, M, phase_windowing, use_gpu)
+    deltay = svd_estimate_shift(ang_qu, N, phase_windowing, use_gpu)
 
     return deltax, deltay
 
