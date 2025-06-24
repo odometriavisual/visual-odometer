@@ -23,7 +23,7 @@ DEFAULT_CONFIG = {
         "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
-            "reprocess_displacement_count": 3
+            "reprocess_displacement_count": 1
         },
 
     },
@@ -72,7 +72,7 @@ class VisualOdometer:
     def calibrate(self, new_xres: float, new_yres: float):
         self.xres, self.yres = new_xres, new_yres
 
-    def estimate_displacement_between(self, img_beg: np.ndarray, img_end: np.ndarray) -> (float, float):
+    def estimate_displacement_between(self, img_beg, img_end) -> (float, float):
         """
         Estimates the displacement between img_beg and img_end.
 
