@@ -1,14 +1,11 @@
-from urllib.parse import uses_query
-
 import numpy as np
 import json
 import threading
 
-from .displacement_estimators.svd import svd_method
-from .displacement_estimators.phase_correlation import  phase_correlation_method
+from .displacement_estimators import svd_method
+from .displacement_estimators import phase_correlation_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
-import time
 
 try:
     import cupy as cp
@@ -130,7 +127,6 @@ class VisualOdometer:
 
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
-                print(displacement)
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
                     for _ in range(count):
@@ -140,7 +136,6 @@ class VisualOdometer:
                                                                                      round_dx, round_dy)
                         new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
                         displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
-                        print(displacement)
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
