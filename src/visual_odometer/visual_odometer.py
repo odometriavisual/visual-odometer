@@ -49,11 +49,30 @@ DEFAULT_CONFIG = {
 
 
 class VisualOdometer:
-    def __init__(self, img_size: (int, int), xres: float = 1.0, yres: float = 1.0):
+    """
+    The class implementing the visual odometer.
+
+    The visual odometer works both with the CPU and CUDA GPUS:
+        To work with the CPU pass the image as numpy arrays.
+        To work with the GPU pass the image as cupy arrays.
+        The API remains the same for both cases.
+
+    The visual odometer is capable of woking in the "Single Shot" mode and in the "Sequential" mode
+    In the "Single Shot" mode, the visual odometer outputs the displacement between a pair of images.
+    In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
+    """
+
+    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0):
+        """
+        Instantiates a visual odometer
+        :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
+        :param xres: Ratio of mm/pixels in the x dimension
+        :param yres: Ratio of mm/pixels in the y dimension
+        """
         # Default configs:
         self.configs = DEFAULT_CONFIG
 
-        self.img_size = img_size
+        self.img_size = img_shape
         self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
 
         self.current_position = np.array([0, 0])  # In pixels
@@ -67,13 +86,22 @@ class VisualOdometer:
         # The second img will be the most recent image
 
     def calibrate(self, new_xres: float, new_yres: float):
+        """
+        Changes the visual odometer's ratio of mm/pixels
+        :param new_xres: New ratio in the x dimension
+        :param new_yres: New ration in the y dimension
+        """
         self.xres, self.yres = new_xres, new_yres
 
     def estimate_displacement_between(self, img_beg, img_end) -> (float, float):
         """
-        Estimates the displacement between img_beg and img_end.
+        Estimates the displacement between two images
 
-        Intendend for single shot usage, for estimating displacements between sequences of images use estimate_last_displacement().
+        Intended for the "Single Shot" mode, for estimating displacements between sequences of images use `estimate_last_displacement()`.
+
+        :param img_beg: Image at t = t_0
+        :param img_end: Image at t = t₀ + Δt
+        :return: x and y displacements in mm
         """
 
         if cp is not None:
@@ -113,6 +141,11 @@ class VisualOdometer:
         return deltax, deltay
 
     def get_displacement(self):
+        """
+        Get the next displacement in "Sequential" mode.
+
+        :return: Next x and y displacements in mm
+        """
         try:
             reprocess_displacement = self.configs["Displacement Estimation"]["reprocess_displacement"]
             skip_frames = self.configs["Displacement Estimation"]["skip_frames"]
@@ -158,6 +191,11 @@ class VisualOdometer:
             return None, None
 
     def feed_image(self, img) -> None:
+        """
+        Send the next image in "Sequential" mode for processing
+        :param img: Next image in the stream
+        """
+
         # Update the latest image:
         if cp is not None:
             use_gpu = isinstance(img, cp.ndarray)
