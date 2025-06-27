@@ -1,10 +1,11 @@
 *.pyc 
 *.jpg
 *.mp4
-*.png
+# *.png
 *.zip
 .idea
 data
+visual-odometer-config.json
 
 # Created by https://www.gitignore.io/api/intellij
 

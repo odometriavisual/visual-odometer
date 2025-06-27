@@ -1,3 +1,7 @@
+"""
+    Example for processing the displacements between frames in an image stream.
+"""
+
 from visual_odometer import VisualOdometer
 import time
 from PIL import Image, ImageOps
@@ -15,8 +19,8 @@ def load_img(filename):
     img_grayscale = ImageOps.grayscale(img_array_rgb)
     return img_grayscale
 
-grayscale_img0 = load_img('./img.png')  # image at t = t₀
-grayscale_img1 = load_img('./img_translated.png') # image at t = t₀ + Δt
+grayscale_img0 = load_img('../datasets/dario_320x240/img.png')  # image at t = t₀
+grayscale_img1 = load_img('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
 
 if use_gpu:
     img0 = cp.asarray(grayscale_img0)
