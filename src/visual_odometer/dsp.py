@@ -1,8 +1,9 @@
+import numpy as np
+
 try:
     import cupy as cp
 except:
     cp = None
-import numpy as np
 
 # Frequency Windows:
 
@@ -38,7 +39,6 @@ def apply_raised_cosine_window(image, use_gpu = False):
              0.5 * (1 + xp.cos(xp.pi * (2 * j - cols) / cols))
     return image * window
 
-
 def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float, use_gpu=False):
     if use_gpu:
         xp = cp
@@ -50,7 +50,6 @@ def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float
               + a2 * xp.cos(4 * xp.pi * n / (size - 1))
               - a3 * xp.cos(6 * xp.pi * n / (size - 1)))
     return window
-
 
 def apply_blackman_harris_window(image,
                                  a0: float = 0.35875, a1: float = 0.48829,

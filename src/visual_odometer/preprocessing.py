@@ -1,4 +1,3 @@
-import numpy as np
 from PIL import Image
 from .dsp import *
 
@@ -17,7 +16,6 @@ def apply_spatial_window(img, method: str, params: dict, use_gpu=False):
     else:
         print(f'Atenção: tentando aplicar o método de janelamento de imagem {method}, mas ele não está implementado.')
         return img
-
 
 def apply_downsampling(img, method: str, params: dict, use_gpu=False):
     if method == "" or method == None:
@@ -39,7 +37,6 @@ def apply_downsampling(img, method: str, params: dict, use_gpu=False):
     else:
         return img
 
-
 def apply_frequency_window(spectrum: np.ndarray, method: str, params: dict):
     if method == "Stone_et_al_2001":
         return ideal_lowpass(spectrum, params["factor"])
@@ -49,10 +46,8 @@ def apply_frequency_window(spectrum: np.ndarray, method: str, params: dict):
         print(f'Atenção: tentando aplicar o método {method}, mas ele não está implementado.')
         return spectrum
 
-
-# Function which applies all the preprocessing:
-
 def image_preprocessing(img, configs: dict, use_gpu = False):
+    # Function which applies all the preprocessing
     # Apply downsampling:
     img = apply_downsampling(
         img,
