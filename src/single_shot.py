@@ -18,7 +18,7 @@ def load(filename):
 img0 = load('../datasets/dario_320x240/img.png') # image at t = t₀
 img1 = load('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
 
-odometer = VisualOdometer(img_shape=img0.shape)
+odometer = VisualOdometer()
 odometer.save_config('./')
 
 odometer.calibrate(new_xres=1.0, new_yres=1.0)
