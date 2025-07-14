@@ -62,7 +62,7 @@ class VisualOdometer:
     In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
     """
 
-    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0):
+    def __init__(self, img_shape: (int, int) = (0,0), xres: float = 1.0, yres: float = 1.0):
         """
         Instantiates a visual odometer
         :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
@@ -72,7 +72,10 @@ class VisualOdometer:
         # Default configs:
         self.configs = DEFAULT_CONFIG
 
-        self.img_size = img_shape
+        if img_shape is not (0,0):
+            print("O img_shape não é mais necessário no VisualOdometer, será removido em breve.")
+
+        self.img_size = (None,None)
         self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
 
         self.current_position = np.array([0, 0])  # In pixels
@@ -109,14 +112,11 @@ class VisualOdometer:
         else:
             use_gpu = False
 
-        img_x_size = img_beg.shape[1]
-        img_y_size = img_end.shape[0]
-
         fft_beg = image_preprocessing(img_beg, self.configs, use_gpu=use_gpu)
         fft_end = image_preprocessing(img_end, self.configs, use_gpu=use_gpu)
-        return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
+        return self._estimate_displacement(fft_beg, fft_end, img_beg.shape[1], img_beg.shape[0])
 
-    def _estimate_displacement(self, fft_beg, fft_end, img_size_x = None, img_size_y = None) -> (float, float):
+    def _estimate_displacement(self, fft_beg, fft_end, img_size_x, img_size_y) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
 
         if cp is not None:
@@ -124,9 +124,6 @@ class VisualOdometer:
         else:
             use_gpu = False
 
-        if img_size_x is None:
-            img_size_x = self.img_size[1]
-            img_size_y = self.img_size[0]
 
         if method == "svd":
             _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y, use_gpu=use_gpu)  # In pixels
@@ -159,7 +156,7 @@ class VisualOdometer:
                     original_img_end = self.imgs_original[1].copy()
 
                 # Estimar deslocamento bruto
-                displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
+                displacement = self._estimate_displacement(self.img_size[1], self.img_size[0])
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
                     for _ in range(count):
@@ -208,6 +205,7 @@ class VisualOdometer:
             # The first iteration
             self.imgs_processed[0] = img_spectrum
             self.imgs_original[0] = img
+            self.img_size=img.shape()
         else:
             # Update the current image:
             new_img = img_spectrum
