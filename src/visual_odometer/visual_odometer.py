@@ -72,7 +72,7 @@ class VisualOdometer:
         # Default configs:
         self.configs = DEFAULT_CONFIG
 
-        if img_shape is not (0,0):
+        if img_shape != (0,0):
             print("O img_shape não é mais necessário no VisualOdometer, será removido em breve.")
 
         self.img_size = (None,None)
@@ -156,7 +156,7 @@ class VisualOdometer:
                     original_img_end = self.imgs_original[1].copy()
 
                 # Estimar deslocamento bruto
-                displacement = self._estimate_displacement(self.img_size[1], self.img_size[0])
+                displacement = self._estimate_displacement(spectrum_beg, spectrum_end, self.img_size[1], self.img_size[0])
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
                     for _ in range(count):
@@ -205,7 +205,7 @@ class VisualOdometer:
             # The first iteration
             self.imgs_processed[0] = img_spectrum
             self.imgs_original[0] = img
-            self.img_size=img.shape()
+            self.img_size=img.shape
         else:
             # Update the current image:
             new_img = img_spectrum

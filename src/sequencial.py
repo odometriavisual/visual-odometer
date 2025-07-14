@@ -16,7 +16,7 @@ def load_img(filename):
 
 img_stream = [(path.split(img_path)[1], xp.asarray(load_img(img_path))) for img_path in glob('../datasets/dario_320x240/*.png')]
 
-odometer = VisualOdometer(img_shape=img_stream[0][1].shape)
+odometer = VisualOdometer()
 odometer.feed_image(img_stream[0][1])
 odometer.get_displacement()
 odometer.feed_image(img_stream[1][1])
