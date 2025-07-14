@@ -126,9 +126,9 @@ class VisualOdometer:
 
 
         if method == "svd":
-            _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y, use_gpu=use_gpu)  # In pixels
+            _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y)  # In pixels
         elif method == "phase-correlation":
-            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end, use_gpu=use_gpu)
+            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
         else:
             raise NotImplementedError
 
