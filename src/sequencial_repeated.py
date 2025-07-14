@@ -21,8 +21,8 @@ def load_img(filename):
     img_grayscale = ImageOps.grayscale(img_array_rgb)
     return img_grayscale
 
-filenames = glob('../datasets/11_20250618T152749_320x240/*.jpg')
-i = randint(1, len(filenames))
+filenames = glob('../datasets/dario_320x240/*.png')
+i = randint(0, len(filenames) - 2)
 grayscale_img0 = load_img(filenames[i])  # image at t = t₀
 grayscale_img1 = load_img(filenames[i+1]) # image at t = t₀ + Δt
 
