@@ -29,6 +29,10 @@ def get_svds(use_gpu: bool = False):
 # Define o backend a ser usado globalmente
 def set_backend(use_gpu: bool):
     global _current_xp, _current_svds, _current_use_gpu
+
+    if use_gpu is True and _cupy_available is False:
+        print("[arraylib] ⚠️ Atenção: GPU foi solicitada, mas CuPy não está disponível. Revertendo para CPU.")
+
     _current_xp = get_array_module(use_gpu)
     _current_svds = get_svds(use_gpu)
     _current_use_gpu = use_gpu

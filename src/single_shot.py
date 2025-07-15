@@ -1,22 +1,23 @@
 """
     Example for processing the displacements two isolated images.
 """
-
+from visual_odometer.lib.arraylib import xp_backend, set_backend
 from visual_odometer import VisualOdometer
+from PIL import Image, ImageOps
 import time
 
-def load(filename):
-    from PIL import Image, ImageOps
-    import numpy as np
-
+def load_img(filename):
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
-    img_array = np.asarray(img_grayscale)
+    return img_grayscale
 
-    return img_array
+grayscale_img0 = load_img('../datasets/dario_320x240/img.png') # image at t = t₀
+grayscale_img1 = load_img('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
 
-img0 = load('../datasets/dario_320x240/img.png') # image at t = t₀
-img1 = load('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
+set_backend(use_gpu=True) # Tenta usar gpu se disponível
+xp = xp_backend()
+img0 = xp.asarray(grayscale_img0)
+img1 = xp.asarray(grayscale_img1)
 
 odometer = VisualOdometer()
 odometer.save_config('./')

@@ -1,43 +1,44 @@
+"""
+    Example for processing the displacements between frames in an image stream.
+"""
+from visual_odometer.lib.arraylib import xp_backend, set_backend
 from visual_odometer import VisualOdometer
-import time
-from glob import glob
-from os import path
 from PIL import Image, ImageOps
-
-try:
-    import cupy as xp
-except Exception:
-    import numpy as xp
+import time
 
 def load_img(filename):
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
     return img_grayscale
 
-img_stream = [(path.split(img_path)[1], xp.asarray(load_img(img_path))) for img_path in glob('../datasets/dario_320x240/*.png')]
+grayscale_img0 = load_img('../datasets/dario_320x240/img.png') # image at t = t₀
+grayscale_img1 = load_img('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
 
+set_backend(use_gpu=True) # Tenta usar gpu se disponível
+xp = xp_backend()
+img0 = xp.asarray(grayscale_img0)
+img1 = xp.asarray(grayscale_img1)
+
+stream_size = 100
+img_stream = [img0, img1] * stream_size
 odometer = VisualOdometer()
-odometer.feed_image(img_stream[0][1])
+
+odometer.feed_image(img0)
 odometer.get_displacement()
-odometer.feed_image(img_stream[1][1])
+odometer.feed_image(img1)
 odometer.get_displacement()
+
+time.sleep(1)
 
 t0 = time.time()
 
-for img_path, img in img_stream:
-    ti0 = time.time()
+for img in img_stream:
     odometer.feed_image(img)
-    odometer.get_displacement()
-    ti1 = time.time()
-    print(f'{img_path}: dt={(ti1-ti0)*1000:.3f}ms')
-
-t1 = time.time()
-
-delta_t = t1 - t0
+    print(odometer.get_displacement())
+delta_t = time.time() - t0
 
 print(f"""
 Number of frames: {len(img_stream)}
 Processed frames: {odometer.number_of_displacements} out of {len(img_stream)}
-Real FPS = {odometer.number_of_displacements / delta_t:.2f}"
-""")
-
+Real FPS = {odometer.number_of_displacements / delta_t:.2f}."
+      """)
