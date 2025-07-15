@@ -34,10 +34,10 @@ def set_backend(use_gpu: bool):
     _current_use_gpu = use_gpu
 
 # Acesso global ao backend atual
-def xp():
+def xp_backend():
     return _current_xp
 
-def svds():
+def svds_backend():
     return _current_svds
 
 def is_gpu():

@@ -7,10 +7,7 @@ from .displacement_estimators import phase_correlation_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
 
-try:
-    import cupy as cp
-except ImportError:
-    cp = None
+from .lib.arraylib import xp_backend, is_gpu
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
@@ -107,23 +104,12 @@ class VisualOdometer:
         :return: x and y displacements in mm
         """
 
-        if cp is not None:
-            use_gpu = isinstance(img_beg, cp.ndarray)
-        else:
-            use_gpu = False
-
-        fft_beg = image_preprocessing(img_beg, self.configs, use_gpu=use_gpu)
-        fft_end = image_preprocessing(img_end, self.configs, use_gpu=use_gpu)
+        fft_beg = image_preprocessing(img_beg, self.configs)
+        fft_end = image_preprocessing(img_end, self.configs)
         return self._estimate_displacement(fft_beg, fft_end, img_beg.shape[1], img_beg.shape[0])
 
     def _estimate_displacement(self, fft_beg, fft_end, img_size_x, img_size_y) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
-
-        if cp is not None:
-            use_gpu = isinstance(fft_beg, cp.ndarray)
-        else:
-            use_gpu = False
-
 
         if method == "svd":
             _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y)  # In pixels
@@ -193,13 +179,7 @@ class VisualOdometer:
         :param img: Next image in the stream
         """
 
-        # Update the latest image:
-        if cp is not None:
-            use_gpu = isinstance(img, cp.ndarray)
-        else:
-            use_gpu = False
-
-        img_spectrum = image_preprocessing(img, self.configs, use_gpu=use_gpu)
+        img_spectrum = image_preprocessing(img, self.configs)
 
         if self.imgs_processed[0] is None:
             # The first iteration

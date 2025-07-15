@@ -1,7 +1,7 @@
-from ..lib.arraylib import xp, as_float
-xp = xp()
+from ..lib.arraylib import xp_backend, as_float
 
 def phase_correlation_method(fft_beg, fft_end):
+    xp = xp_backend()
     # Cross-power spectrum
     R = fft_end * xp.conj(fft_beg)
     R /= xp.maximum(xp.abs(R), 1e-10)  # evitar divisão por zero

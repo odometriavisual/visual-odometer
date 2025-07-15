@@ -2,12 +2,11 @@ import numpy as np
 from numpy import ndarray
 
 from scipy.signal import convolve
-from ..lib.arraylib import xp, svds, as_float
+from ..lib.arraylib import xp_backend, svds_backend, as_float
 
-xp = xp()
-svds = svds()
 
 def normalize_product(F, G):
+    xp = xp_backend()
     Q = F * xp.conj(G)
     Q /= xp.abs(Q)
     return Q
@@ -44,6 +43,7 @@ def phase_unwrapping(phase_vec: ndarray, factor: float = 0.7) -> ndarray:
 
 
 def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None) -> float:
+    xp = xp_backend()
     phase_unwrapped = xp.unwrap(phase_vec)
     r = xp.arange(0, phase_unwrapped.size)
     M = r.size // 2
@@ -66,12 +66,13 @@ def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None) -> floa
 
 
 def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_filter=True) -> (float, float):
+    xp = xp_backend()
+    svds = svds_backend()
 
     Q = normalize_product(fft_beg, fft_end)
 
     #if finge_filter is True:
         #Q = phase_fringe_filter(Q)
-
     qu, s, qv = svds(Q, k=1)
     ang_qu = xp.angle(qu[:, 0])
     ang_qv = xp.angle(qv[0, :])
