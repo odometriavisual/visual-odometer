@@ -13,7 +13,7 @@ DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
         "use_gpu": False,
-        "reprocess_displacement":True,
+        "reprocess_displacement":False,
         "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
@@ -208,6 +208,10 @@ class VisualOdometer:
 
     def config_downsampling(self, method: str = "", **kwargs):
         self._config("Downsampling", method, kwargs)
+
+    def config_reprocess_displacement(self, reprocess_displacement: bool, reprocess_displacement_count: int = 1):
+        self.configs["Displacement Estimation"]["reprocess_displacement"] = reprocess_displacement
+        self.configs["Displacement Estimation"]["params"]["reprocess_displacement_count"] = reprocess_displacement_count
 
     def set_config(self, new_config):
         self.configs = new_config
