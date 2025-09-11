@@ -1,12 +1,7 @@
 import numpy as np
-try:
-    import cupy as cp
-except ImportError:
-    cp = None
 
-def subpixel_peak_position(corr_abs, peak, xp):
+def subpixel_peak_position(corr_abs, peak):
     y, x = peak
-
     def parabolic(f, x):
         """Retorna o deslocamento subpixel do vértice da parábola definida por três pontos."""
         if x <= 0 or x >= f.shape[0] - 1:
@@ -24,21 +19,19 @@ def subpixel_peak_position(corr_abs, peak, xp):
 
     return x + dx, y + dy
 
-def phase_correlation_method(fft_beg, fft_end, use_gpu=False):
-    xp = cp if use_gpu and cp else np
-
+def phase_correlation_method(fft_beg, fft_end):
     # Cross-power spectrum
-    R = fft_end * xp.conj(fft_beg)
-    R /= xp.maximum(xp.abs(R), 1e-10)  # evitar divisão por zero
+    R = fft_end * np.conj(fft_beg)
+    R /= np.maximum(np.abs(R), 1e-10)  # evitar divisão por zero
 
     # Correlation (IFFT)
-    corr = xp.fft.ifft2(R)
-    corr = xp.fft.fftshift(corr)
-    corr_abs = xp.abs(corr)
+    corr = np.fft.ifft2(R)
+    corr = np.fft.fftshift(corr)
+    corr_abs = np.abs(corr)
 
     # Pico
-    max_idx = xp.unravel_index(xp.argmax(corr_abs), corr.shape)
-    sub_x, sub_y = subpixel_peak_position(corr_abs, max_idx, xp)
+    max_idx = np.unravel_index(np.argmax(corr_abs), corr.shape)
+    sub_x, sub_y = subpixel_peak_position(corr_abs, max_idx)
 
     # Centro
     mid_y, mid_x = corr.shape[0] // 2, corr.shape[1] // 2

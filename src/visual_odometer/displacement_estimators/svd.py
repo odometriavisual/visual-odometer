@@ -4,21 +4,10 @@ from numpy import ndarray
 from scipy.signal import convolve
 from scipy.sparse.linalg import svds as svds_cpu
 
-try:
-    import cupy as cp
-    from cupyx.scipy.sparse.linalg import svds as svds_gpu
-except:
-    pass
-
-def normalize_product(F, G, use_gpu=False):
-    if use_gpu:
-        Q = F * cp.conj(G)
-        Q /= cp.abs(Q)
-        return Q
-    else:
-        Q = F * np.conj(G)
-        Q /= np.abs(Q)
-        return Q
+def normalize_product(F, G):
+    Q = F * np.conj(G)
+    Q /= np.abs(Q)
+    return Q
 
 def phase_fringe_filter(cross_power_spectrum: ndarray, window_size: tuple = (5, 5), threshold: float = 0.03) -> ndarray:
     # Aplica o filtro de média para reduzir o ruído
@@ -51,14 +40,9 @@ def phase_unwrapping(phase_vec: ndarray, factor: float = 0.7) -> ndarray:
     return np.cumsum(corrected_difference)
 
 
-def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None, use_gpu=False) -> float:
-    if use_gpu:
-        xp = cp
-    else:
-        xp = np
-
-    phase_unwrapped = xp.unwrap(phase_vec)
-    r = xp.arange(0, phase_unwrapped.size)
+def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None) -> float:
+    phase_unwrapped = np.unwrap(phase_vec)
+    r = np.arange(0, phase_unwrapped.size)
     M = r.size // 2
 
     if phase_windowing == "central":
@@ -71,45 +55,26 @@ def svd_estimate_shift(phase_vec: ndarray, N: int, phase_windowing=None, use_gpu
         x = r
         y = phase_unwrapped
 
-    x_mean = xp.mean(x)
-    y_mean = xp.mean(y)
-    mu = xp.sum((x - x_mean) * (y - y_mean)) / xp.sum((x - x_mean) ** 2)
-    delta = mu * N / (2 * xp.pi)
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    mu = np.sum((x - x_mean) * (y - y_mean)) / np.sum((x - x_mean) ** 2)
+    delta = mu * N / (2 * np.pi)
+    return float(delta)
 
-    return float(delta.get()) if use_gpu else float(delta)
+def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_filter=True) -> (float, float):
 
-def randomized_svd_gpu(A, k=1, n_iter=20):
-    m, n = A.shape
-    G = cp.random.randn(n, k)
-    Y = A @ G
-    for _ in range(n_iter):
-        Y = A @ (A.T @ Y)
-    Q, _ = cp.linalg.qr(Y)
-    B = Q.T @ A
-    U_hat, S, Vt = cp.linalg.svd(B, full_matrices=False)
-    U = Q @ U_hat
-    return U[:, :k], S[:k], Vt[:k, :]
+    Q = normalize_product(fft_beg, fft_end)
 
+    if finge_filter is True:
+        Q = phase_fringe_filter(Q)
 
-def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_filter=True,
-               use_gpu=False) -> (float, float):
-
-    Q = normalize_product(fft_beg, fft_end, use_gpu=use_gpu)
-
-    #if finge_filter is True:
-        #Q = phase_fringe_filter(Q)
-    if use_gpu:
-        qu, s, qv = randomized_svd_gpu(Q, k=1)
-        ang_qu = cp.angle(qu[:, 0])
-        ang_qv = cp.angle(qv[0, :])
-    else:
-        qu, s, qv = svds_cpu(Q, k=1)
-        ang_qu = np.angle(qu[:, 0])
-        ang_qv = np.angle(qv[0, :])
+    qu, s, qv = svds_cpu(Q, k=1)
+    ang_qu = np.angle(qu[:, 0])
+    ang_qv = np.angle(qv[0, :])
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltax = svd_estimate_shift(ang_qv, M, phase_windowing, use_gpu)
-    deltay = svd_estimate_shift(ang_qu, N, phase_windowing, use_gpu)
+    deltax = svd_estimate_shift(ang_qv, M, phase_windowing)
+    deltay = svd_estimate_shift(ang_qu, N, phase_windowing)
 
     return deltax, deltay
 
