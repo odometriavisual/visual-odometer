@@ -33,8 +33,8 @@ def apply_blackman_harris_window(image,
                                  a2: float = 0.14128, a3: float = 0.01168):
 
     height, width = image.shape
-    window_row = blackman_harris_window(width, a0, a1, a2, a3, use_gpu=use_gpu)
-    window_col = blackman_harris_window(height, a0, a1, a2, a3, use_gpu=use_gpu)
+    window_row = blackman_harris_window(width, a0, a1, a2, a3)
+    window_col = blackman_harris_window(height, a0, a1, a2, a3)
     image_windowed = np.outer(window_col, window_row) * image
     return image_windowed
 
