@@ -32,8 +32,8 @@ t0 = time.time()
 
 for img in img_stream:
     odometer.feed_image(img)
-    odometer.get_displacement()
-    #print(odometer.get_displacement())
+    #odometer.get_displacement()
+    print(odometer.get_displacement())
 delta_t = time.time() - t0
 
 print(f"""
