@@ -42,48 +42,48 @@ DEFAULT_CONFIG = {
 }
 
 
-class VisualOdometer:
+# fora da classe
+def worker_img_preprocess(conn_in, conn_out, configs):
+    while True:
+        img = conn_in.recv()
+        if img is None:
+            conn_out.send(None)
+            break
+        spectrum = image_preprocessing(img, configs)
+        conn_out.send((spectrum, img))
 
-    def worker_img_preprocess(self, conn_in, conn_out, configs):
-        """Worker: recebe imagem crua, aplica preprocessamento e envia FFT."""
-        while True:
-            img = conn_in.recv()
-            if img is None:
-                conn_out.send(None)
-                break
-            spectrum = image_preprocessing(img, configs)
-            conn_out.send((spectrum, img))
 
-    def worker_svd(self, conn_in, conn_out, configs, xres, yres):
-        """Worker: recebe duas imagens preprocessadas, estima deslocamento acumulado."""
-        prev_spectrum, prev_img = None, None
+def worker_svd(conn_in, conn_out, configs, xres, yres):
+    prev_spectrum, prev_img = None, None
+    acc_disp = [0.0, 0.0]
+
+    while True:
+        data = conn_in.recv()
+        if data is None:
+            conn_out.send(None)
+            break
+
+        spectrum, img = data
+        if prev_spectrum is not None:
+            method = configs["Displacement Estimation"]["method"]
+            if method == "svd":
+                dx, dy = svd_method(prev_spectrum, spectrum, img.shape[1], img.shape[0])
+            elif method == "phase-correlation":
+                dx, dy = phase_correlation_method(prev_spectrum, spectrum)
+            else:
+                raise NotImplementedError
+
+            dx *= xres
+            dy *= yres
+
+            acc_disp = [acc_disp[0] + dx, acc_disp[1] + dy]
+
+        prev_spectrum, prev_img = spectrum, img
+        conn_out.send(tuple(acc_disp))
         acc_disp = [0.0, 0.0]
 
-        while True:
-            data = conn_in.recv()
-            if data is None:
-                conn_out.send(None)
-                break
 
-            spectrum, img = data
-            if prev_spectrum is not None:
-                method = configs["Displacement Estimation"]["method"]
-                if method == "svd":
-                    dx, dy = svd_method(prev_spectrum, spectrum, img.shape[1], img.shape[0])
-                elif method == "phase-correlation":
-                    dx, dy = phase_correlation_method(prev_spectrum, spectrum)
-                else:
-                    raise NotImplementedError
-
-                dx *= xres
-                dy *= yres
-
-                acc_disp[0] += dx
-                acc_disp[1] += dy
-
-            prev_spectrum, prev_img = spectrum, img
-            conn_out.send(tuple(acc_disp))
-            acc_disp = [0.0, 0.0]
+class VisualOdometer:
 
     def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0, async_mode=False):
         """
@@ -116,6 +116,7 @@ class VisualOdometer:
     def _setup_async_mode(self):
         """Configura o modo assíncrono com pipes e workers."""
         self.accumulated_displacements = [0.0, 0.0]
+        self.displacement_lock = threading.Lock()  # ADICIONADO: Lock para deslocamentos acumulados
 
         # Criação dos pipes
         # Pipe 1: main -> preprocess worker
@@ -129,13 +130,13 @@ class VisualOdometer:
 
         # Criação dos processos workers
         self.proc_preprocess = Process(
-            target=self.worker_img_preprocess,
+            target=worker_img_preprocess,
             args=(pipe_main_to_pre_recv, pipe_pre_to_svd_send, self.configs),
             daemon=True,
         )
 
         self.proc_svd = Process(
-            target=self.worker_svd,
+            target=worker_svd,
             args=(pipe_pre_to_svd_recv, pipe_svd_to_main_send, self.configs, self.xres, self.yres),
             daemon=True,
         )
@@ -144,11 +145,32 @@ class VisualOdometer:
         self.proc_preprocess.start()
         self.proc_svd.start()
 
+        # ADICIONADO: Thread para receber deslocamentos dos workers
+        self.result_thread = threading.Thread(target=self._displacement_receiver, daemon=True)
+        self.result_thread.start()
+
         # Bind dos métodos assíncronos
         self.feed_image = self._feed_image_async
         self.get_displacement = self._get_displacement_async
 
         print("Modo assíncrono inicializado com sucesso!")
+
+    def _displacement_receiver(self):
+        """
+        Thread que recebe deslocamentos dos workers e os acumula.
+        """
+        while True:
+            try:
+                displacement = self.pipe_svd_to_main_recv.recv()
+                if displacement is None:
+                    break
+
+                with self.displacement_lock:
+                    self.accumulated_displacements[0] += displacement[0]
+                    self.accumulated_displacements[1] += displacement[1]
+            except Exception as e:
+                print(f"Erro ao receber deslocamento: {e}")
+                break
 
     def _setup_sync_mode(self):
         """Configura o modo síncrono."""
@@ -170,22 +192,18 @@ class VisualOdometer:
 
     def _get_displacement_async(self):
         """
-        Obtém o próximo deslocamento do pipeline assíncrono.
-        :return: Tupla (dx, dy) com deslocamentos em mm
+        Obtém e zera os deslocamentos acumulados.
+        :return: Tupla (dx, dy) com deslocamentos acumulados em mm
         """
         try:
-            if self.pipe_svd_to_main_recv.poll():  # Verifica se há dados disponíveis
-                displacement = self.pipe_svd_to_main_recv.recv()
+            with self.displacement_lock:
+                displacement = tuple(self.accumulated_displacements)
+                self.accumulated_displacements = [0.0, 0.0]  # Zera após obter
 
-                if displacement is not None:
-                    self.current_position[0] += displacement[0]
-                    self.current_position[1] += displacement[1]
-                    self.number_of_displacements += 1
-                    return displacement
-                else:
-                    return 0.0, 0.0
-            else:
-                return 0.0, 0.0  # Nenhum resultado disponível ainda
+            self.current_position += displacement
+            self.number_of_displacements += 1
+            return displacement
+
         except Exception as e:
             print(f"Erro ao obter deslocamento: {e}")
             return 0.0, 0.0
