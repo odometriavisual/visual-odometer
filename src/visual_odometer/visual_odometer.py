@@ -1,3 +1,4 @@
+from copy import deepcopy
 from multiprocessing import Pipe, Process
 import numpy as np
 import json
@@ -11,11 +12,11 @@ from .dsp import crop_two_imgs_with_displacement
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
-        "reprocess_displacement": True,
+        "reprocess_displacement": False,
         "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
-            "reprocess_displacement_count": 1
+            "reprocess_displacement_count": 5
         },
     },
     "Frequency Window": {
@@ -41,6 +42,13 @@ DEFAULT_CONFIG = {
     },
 }
 
+def merge_dicts(base: dict, override: dict):
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            merge_dicts(base[k], v)
+        else:
+            base[k] = v
+    return base
 
 # fora da classe
 def worker_img_preprocess(conn_in, conn_out, configs):
@@ -85,7 +93,7 @@ def worker_svd(conn_in, conn_out, configs, xres, yres):
 
 class VisualOdometer:
 
-    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0, async_mode=False):
+    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0, configs = None, async_mode=False):
         """
         Instantiates a visual odometer
         :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
@@ -93,8 +101,10 @@ class VisualOdometer:
         :param yres: Ratio of mm/pixels in the y dimension
         :param async_mode: Se True, usa processamento assíncrono com pipes
         """
-        # Default configs:
-        self.configs = DEFAULT_CONFIG
+
+        self.configs = DEFAULT_CONFIG.copy()  # cópia rasa (shallow copy)
+        if configs:
+            merge_dicts(self.configs, configs)
 
         self.img_size = img_shape
         self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
@@ -169,7 +179,6 @@ class VisualOdometer:
                     self.accumulated_displacements[0] += displacement[0]
                     self.accumulated_displacements[1] += displacement[1]
             except Exception as e:
-                print(f"Erro ao receber deslocamento: {e}")
                 break
 
     def _setup_sync_mode(self):
@@ -245,6 +254,7 @@ class VisualOdometer:
 
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
+                print(f"Iniciando deslocamento: {displacement}")
 
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
@@ -256,6 +266,7 @@ class VisualOdometer:
                         )
                         new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
                         displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
+                        print(f"Reprocessando deslocamento: {displacement}")
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]

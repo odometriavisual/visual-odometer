@@ -68,6 +68,8 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing=None, finge_fil
     if finge_filter is True:
         Q = phase_fringe_filter(Q)
 
+    Q_reduced = Q[:N // 2, :M // 2]
+
     qu, s, qv = svds_cpu(Q, k=1)
     ang_qu = np.angle(qu[:, 0])
     ang_qv = np.angle(qv[0, :])
