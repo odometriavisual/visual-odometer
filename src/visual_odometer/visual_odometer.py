@@ -12,11 +12,11 @@ from .dsp import crop_two_imgs_with_displacement
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
-        "reprocess_displacement": False,
+        "reprocess_displacement": True,
         "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
-            "reprocess_displacement_count": 5
+            "reprocess_displacement_count": 1
         },
     },
     "Frequency Window": {
@@ -74,6 +74,8 @@ def worker_svd(conn_in, conn_out, configs, xres, yres):
         spectrum, img = data
         if prev_spectrum is not None:
             method = configs["Displacement Estimation"]["method"]
+
+            # deslocamento bruto
             if method == "svd":
                 dx, dy = svd_method(prev_spectrum, spectrum, img.shape[1], img.shape[0])
             elif method == "phase-correlation":
@@ -81,6 +83,32 @@ def worker_svd(conn_in, conn_out, configs, xres, yres):
             else:
                 raise NotImplementedError
 
+            # reprocessamento opcional
+            if configs["Displacement Estimation"].get("reprocess_displacement", False):
+                count = configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
+
+                # sempre usa as imagens originais pra recortar e refinar
+                for _ in range(count):
+                    round_dx = int(round(dx))
+                    round_dy = int(round(dy))
+
+                    crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(
+                        prev_img, img, round_dx, round_dy
+                    )
+
+                    # calcula deslocamento refinado entre os crops
+                    dx_ref, dy_ref = svd_method(
+                        image_preprocessing(crop_img_beg, configs),
+                        image_preprocessing(crop_img_end, configs),
+                        crop_img_end.shape[1],
+                        crop_img_end.shape[0],
+                    )
+
+                    # acumula refino
+                    dx = round_dx + dx_ref
+                    dy = round_dy + dy_ref
+
+            # aplica resolução
             dx *= xres
             dy *= yres
 
@@ -254,7 +282,7 @@ class VisualOdometer:
 
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
-                print(f"Iniciando deslocamento: {displacement}")
+                # print(f"Iniciando deslocamento: {displacement}")
 
                 if reprocess_displacement:
                     count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
@@ -266,7 +294,7 @@ class VisualOdometer:
                         )
                         new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
                         displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
-                        print(f"Reprocessando deslocamento: {displacement}")
+                        #print(f"Reprocessando deslocamento: {displacement}")
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
