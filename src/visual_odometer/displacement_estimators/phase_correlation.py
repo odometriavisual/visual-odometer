@@ -1,50 +1,78 @@
 import numpy as np
-try:
-    import cupy as cp
-except ImportError:
-    cp = None
+from numpy.typing import NDArray
 
-def subpixel_peak_position(corr_abs, peak, xp):
-    y, x = peak
 
-    def parabolic(f, x):
-        """Retorna o deslocamento subpixel do vértice da parábola definida por três pontos."""
-        if x <= 0 or x >= f.shape[0] - 1:
-            return 0.0  # borda, não é possível interpolar
-        denom = (f[x-1] - 2*f[x] + f[x+1])
-        if denom == 0:
-            return 0.0
-        return 0.5 * (f[x-1] - f[x+1]) / denom
+def subpixel_peak_position(corr_abs: NDArray[np.float32], method: str="max") -> tuple[float, float]:
+    """
+    Extract from the time-domain 2D correlation the displacement value, assuming the correlation was perfomed between two shifted images.
 
-    dx = dy = 0.0
-    if 1 <= x < corr_abs.shape[1] - 1:
-        dx = parabolic(corr_abs[y, :], x)
-    if 1 <= y < corr_abs.shape[0] - 1:
-        dy = parabolic(corr_abs[:, x], y)
+    Parameters
+    ----------
+    corr_abs : NDArray[np.float32]
+        A 2-D Array represeting the correlation matrix between I1[y, x] and I2[y, x] where I2[y, x] = I1[y - dy, x - dx].
+    method : str, optional
+        Which displacement detection method, by default "max".
 
-    return x + dx, y + dy
+    Returns
+    -------
+    tuple[float, float]
+        Horizontal and vertical (x and y) displacement values, assuming I[y, x].
 
-def phase_correlation_method(fft_beg, fft_end, use_gpu=False):
-    xp = cp if use_gpu and cp else np
+    Raises
+    ------
+    NotImplementedError
+        If the ``method`` is not among the implemented methods.
+    """
+    mid_y, mid_x = corr_abs.shape[0] // 2, corr_abs.shape[1] // 2
 
-    # Cross-power spectrum
-    R = fft_end * xp.conj(fft_beg)
-    R /= xp.maximum(xp.abs(R), 1e-10)  # evitar divisão por zero
-
-    # Correlation (IFFT)
-    corr = xp.fft.ifft2(R)
-    corr = xp.fft.fftshift(corr)
-    corr_abs = xp.abs(corr)
-
-    # Pico
-    max_idx = xp.unravel_index(xp.argmax(corr_abs), corr.shape)
-    sub_x, sub_y = subpixel_peak_position(corr_abs, max_idx, xp)
-
-    # Centro
-    mid_y, mid_x = corr.shape[0] // 2, corr.shape[1] // 2
-
-    # Deslocamento
-    dx = sub_x - mid_x
-    dy = sub_y - mid_y
+    match method:
+        case "max":
+            peak_y, peak_x = np.unravel_index(np.argmax(corr_abs), corr_abs.shape)
+            dx = peak_x - mid_x
+            dy = peak_y - mid_y
+        case _:
+            raise NotImplementedError(f"Not implemented peak detection method: {method}")
 
     return float(dx), float(dy)
+
+
+def phase_correlation_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex64], method: str='max') -> tuple[float, float]:
+    """
+    Estimate displacement between two spatialy shifted spectra, i.e.:
+    
+    I_end[y, x] = I_beg[y - dy, x - dx]
+    
+    where fft_beg = FFT(I_beg) and fft_end = FFT(I_end), by using Phase Correlation (PC) [1]_.
+
+    Parameters
+    ----------
+    fft_beg : NDArray[np.complex64]
+        A 2-D array represeting the spectrum of I_beg
+    fft_end : NDArray[np.complex64]
+        A 2-D array represeting the spectrum of I_end
+    method : str, optional
+        Method to extract shift value from time-domain correlation matrix, by default 'max'
+
+    Returns
+    -------
+    tuple[float, float]
+        Horizontal and vertical (x and y) displacement values, assuming I[y, x].
+        
+    References
+    ----------
+    .. [1] Foroosh, H., Zerubia, J. B., & Berthod, M. (2002). Extension of phase correlation to subpixel registration. IEEE transactions on image processing, 11(3), 188-200.
+    
+    """
+
+    # Cross-power spectrum
+    R = fft_end * np.conj(fft_beg)
+    R /= np.maximum(np.abs(R), 1e-10)  # evitar divisão por zero
+
+    # Correlation (IFFT)
+    corr = np.fft.ifft2(R)
+    corr = np.fft.fftshift(corr)
+
+    # Deslocamento
+    dx, dy = subpixel_peak_position(np.abs(corr), method)
+
+    return dx, dy
