@@ -115,17 +115,17 @@ class VisualOdometer:
             img_size_x = self.img_size[1]
             img_size_y = self.img_size[0]
 
-        if method == "svd":
-            _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")  # In pixels
-        elif method == "phase-correlation":
-            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
-        elif method == "proj-svd":
-            _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30,
-                                               phase_windowing="central")
-        elif method == "phase-amplified-correlation":
-            _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
-        else:
-            raise NotImplementedError
+        match method:
+            case "svd":
+                _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")  # In pixels
+            case "phase-correlation":
+                _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
+            case "projection-svd":
+                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30, phase_windowing="central")
+            case "phase-amplified-correlation":
+                _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
+            case _:
+                raise NotImplementedError(f"Displacement estimation method {method} not implemented.")
 
         # Convert from pixels to millimeters (or equivalent):
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
