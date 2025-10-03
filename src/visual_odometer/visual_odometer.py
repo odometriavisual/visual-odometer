@@ -4,20 +4,16 @@ import threading
 
 from .displacement_estimators import svd_method
 from .displacement_estimators import phase_correlation_method
+from .displacement_estimators import proj_svd_method
+from .displacement_estimators import phase_amplified_correlation_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
-
-try:
-    import cupy as cp
-except ImportError:
-    cp = None
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
-        "use_gpu": False,
-        "reprocess_displacement":True,
-        "skip_frames": False,
+        "reprocess_displacement": False,
+        "skip_frames": True,
         "params": {
             "skip_frames_threshold": 5,
             "reprocess_displacement_count": 1
@@ -104,34 +100,30 @@ class VisualOdometer:
         :return: x and y displacements in mm
         """
 
-        if cp is not None:
-            use_gpu = isinstance(img_beg, cp.ndarray)
-        else:
-            use_gpu = False
-
         img_x_size = img_beg.shape[1]
         img_y_size = img_end.shape[0]
 
-        fft_beg = image_preprocessing(img_beg, self.configs, use_gpu=use_gpu)
-        fft_end = image_preprocessing(img_end, self.configs, use_gpu=use_gpu)
+        fft_beg = image_preprocessing(img_beg, self.configs)
+        fft_end = image_preprocessing(img_end, self.configs)
         return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
 
-    def _estimate_displacement(self, fft_beg, fft_end, img_size_x = None, img_size_y = None) -> (float, float):
+    def _estimate_displacement(self, fft_beg, fft_end, img_size_x=None, img_size_y=None) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
-
-        if cp is not None:
-            use_gpu = isinstance(fft_beg, cp.ndarray)
-        else:
-            use_gpu = False
+        params = self.configs["Displacement Estimation"]["params"]
 
         if img_size_x is None:
             img_size_x = self.img_size[1]
             img_size_y = self.img_size[0]
 
         if method == "svd":
-            _deltax, _deltay = svd_method(fft_beg, fft_end,img_size_x, img_size_y, use_gpu=use_gpu)  # In pixels
+            _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")  # In pixels
         elif method == "phase-correlation":
-            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end, use_gpu=use_gpu)
+            _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
+        elif method == "proj-svd":
+            _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30,
+                                               phase_windowing="central")
+        elif method == "phase-amplified-correlation":
+            _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
         else:
             raise NotImplementedError
 
@@ -197,12 +189,7 @@ class VisualOdometer:
         """
 
         # Update the latest image:
-        if cp is not None:
-            use_gpu = isinstance(img, cp.ndarray)
-        else:
-            use_gpu = False
-
-        img_spectrum = image_preprocessing(img, self.configs, use_gpu=use_gpu)
+        img_spectrum = image_preprocessing(img, self.configs)
 
         if self.imgs_processed[0] is None:
             # The first iteration
