@@ -28,7 +28,7 @@ def apply_spatial_window(img: NDArray, method: str, params: dict) -> NDArray:
 
     Raises
     ------
-    NotImplementedError
+    ValueError
         If the ``method`` is not among the implemented spatial or temporal windowing methods.  
     """
 
@@ -41,7 +41,7 @@ def apply_spatial_window(img: NDArray, method: str, params: dict) -> NDArray:
         case "" | None:
             return img
         case _:
-            raise NotImplementedError(f'Invalid spatial window method: {method}')
+            raise ValueError(f'Invalid spatial window method: {method}')
 
 
 def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> NDArray[np.float32]:
@@ -64,7 +64,7 @@ def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> N
 
     Raises
     ------
-    NotImplementedError
+    ValueError
         If the ``method`` is not among the implemented downsampled algorithms.
     """
     factor = params["factor"]
@@ -81,7 +81,7 @@ def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> N
         case "" | None:
             return img
         case _:
-            raise NotImplementedError(f"Invalid downsampling method: {method}")
+            raise ValueError(f"Invalid downsampling method: {method}")
 
 
 def apply_frequency_window(spectrum: NDArray[np.complex64], method: str, params: dict) -> NDArray[np.complex64]:
@@ -104,7 +104,7 @@ def apply_frequency_window(spectrum: NDArray[np.complex64], method: str, params:
 
     Raises
     ------
-    NotImplementedError
+    ValueError
         If the ``method`` is not among the implemented frequency windowing methods.
 
     """
@@ -115,7 +115,7 @@ def apply_frequency_window(spectrum: NDArray[np.complex64], method: str, params:
         case "" | None:
             return spectrum
         case _:
-            raise NotImplementedError(f'Invalid frequency window method: {method}')
+            raise ValueError(f'Invalid frequency window method: {method}')
 
 
 def image_preprocessing(img: NDArray[np.float32], configs: dict) -> NDArray[np.complex64]:

@@ -13,7 +13,7 @@ DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "svd",
         "reprocess_displacement": False,
-        "skip_frames": True,
+        "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
             "reprocess_displacement_count": 1
@@ -125,7 +125,7 @@ class VisualOdometer:
             case "phase-amplified-correlation":
                 _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
             case _:
-                raise NotImplementedError(f"Displacement estimation method {method} not implemented.")
+                raise ValueError(f"Displacement estimation method {method} not valid.")
 
         # Convert from pixels to millimeters (or equivalent):
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
