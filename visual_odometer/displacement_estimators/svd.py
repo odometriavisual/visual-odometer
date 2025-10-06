@@ -24,7 +24,7 @@ def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[f
     """
     R = np.ones((x.size, 2))
     R[:, 0] = x
-    x_sol = np.linalg.lstsq(R, y)
+    x_sol = np.linalg.lstsq(R, y, rcond=None)
     mu, c = x_sol[0]
     return mu, c
 
