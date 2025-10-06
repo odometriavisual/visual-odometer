@@ -100,7 +100,7 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing: str = "", unwr
 
     qu, s, qv = svds_cpu(Q, k=1)
     ang_qu = phase_unwrap(np.angle(qu[:, 0]), unwrap_method)
-    ang_qv = phase_unwrap(np.angle(qu[0, :]), unwrap_method)
+    ang_qv = phase_unwrap(np.angle(qv[0, :]), unwrap_method)
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
     deltax = svd_estimate_shift(ang_qv, M, phase_windowing)
