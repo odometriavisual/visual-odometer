@@ -1,7 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "visual-odometer"
 version = "0.4"
+readme = "README.md"
 dependencies = [
     "numpy==1.26.4",
-    "scipy==1.16.0"
+    "scipy==1.16.0",
+    "pillow==11.2.1"
+
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-xdist",
+    "pandas",
+
+]
+doc = [
+    "sphinx>=5.0.0,<8.2.0",
+    "intersphinx_registry",
+    "pydata-sphinx-theme>=0.15.2",
+    "sphinx-copybutton",
+    "sphinx-design>=0.4.0",
+    "matplotlib>=3.5",
+    "numpydoc",
+    "jupytext",
+    "myst-nb>=1.2.0",
+    "pooch",
+    "jupyterlite-sphinx>=0.19.1",
+    "jupyterlite-pyodide-kernel",
+    "linkify-it-py",
+    "tabulate"
 ]
