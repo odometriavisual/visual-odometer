@@ -5,18 +5,10 @@
 from visual_odometer import VisualOdometer
 import time
 
-def load(filename):
-    from PIL import Image, ImageOps
-    import numpy as np
+from benchmarks.utils import load_img
 
-    img_array_rgb = Image.open(filename)
-    img_grayscale = ImageOps.grayscale(img_array_rgb)
-    img_array = np.asarray(img_grayscale)
-
-    return img_array
-
-img0 = load('../datasets/dario_320x240/img.png') # image at t = t₀
-img1 = load('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
+img0 = load_img('../datasets/dario_320x240/img.png') # image at t = t₀
+img1 = load_img('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
 
 odometer = VisualOdometer(img_shape=img0.shape)
 odometer.save_config('./')
