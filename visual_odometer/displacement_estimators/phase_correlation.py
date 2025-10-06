@@ -20,7 +20,7 @@ def subpixel_peak_position(corr_abs: NDArray[np.float32], method: str="max") -> 
 
     Raises
     ------
-    NotImplementedError
+    ValueError
         If the ``method`` is not among the implemented methods.
     """
     mid_y, mid_x = corr_abs.shape[0] // 2, corr_abs.shape[1] // 2
@@ -31,7 +31,7 @@ def subpixel_peak_position(corr_abs: NDArray[np.float32], method: str="max") -> 
             dx = peak_x - mid_x
             dy = peak_y - mid_y
         case _:
-            raise NotImplementedError(f"Not implemented peak detection method: {method}")
+            raise ValueError(f"Not implemented peak detection method: {method}")
 
     return float(dx), float(dy)
 

@@ -20,7 +20,7 @@ def phase_unwrap(phase_wrapped: NDArray[np.float32], method: str = "itoh1982") -
 
     Raises
     ------
-    NotImplementedError
+    ValueError
         If the ``method`` is not among the implemented phase unwrapping methods. 
     """
 
@@ -30,7 +30,7 @@ def phase_unwrap(phase_wrapped: NDArray[np.float32], method: str = "itoh1982") -
         case "numpy":
             return np.unwrap(phase_wrapped)
         case _:
-            raise NotImplementedError(f"Phase unwrap method {method} not valid.")
+            raise ValueError(f"Phase unwrap method {method} not valid.")
 
 
 def itoh1982_method(phase_vec: NDArray[np.float32], factor: float = 0.7) -> NDArray[np.float32]:
