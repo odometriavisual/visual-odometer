@@ -3,18 +3,15 @@ import time
 from glob import glob
 from os import path
 from PIL import Image, ImageOps
+import numpy as np
 
-try:
-    import cupy as xp
-except Exception:
-    import numpy as xp
 
 def load_img(filename):
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
     return img_grayscale
 
-img_stream = [(path.split(img_path)[1], xp.asarray(load_img(img_path))) for img_path in glob('../datasets/11_20250618T152749_320x240/*.jpg')]
+img_stream = [(path.split(img_path)[1], np.asarray(load_img(img_path))) for img_path in glob('../datasets/11_20250618T152749_320x240/*.jpg')]
 
 odometer = VisualOdometer(img_shape=img_stream[0][1].shape)
 odometer.feed_image(img_stream[0][1])
