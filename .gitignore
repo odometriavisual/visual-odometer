@@ -1,6 +1,8 @@
 *.pyc 
 *.jpg
 *.mp4
+*.pkl
+*.csv
 # *.png
 *.zip
 .idea
