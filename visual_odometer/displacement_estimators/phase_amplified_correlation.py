@@ -29,10 +29,10 @@ def phase_amplified_correlation_method(fft_beg: NDArray[np.complex64], fft_end: 
          
     References
     ----------
-    .. [1] Konstantinidis, D., Stathaki, T., & Argyriou, V. (2019). Phase amplified correlation for improved sub-pixel motion estimation. IEEE Transactions on Image Processing, 28(6), 3089-3101.
-    
-    """    
-    
+    .. [1] Konstantinidis, D., Stathaki, T., & Argyriou, V. (2019). Phase amplified correlation for improved sub-pixel motion estimation. IEEE Transactions on Image Processing, 28(6), 3089-3101. :doi:`10.1109/TIP.2019.2894266`.
+
+    """
+
     # Regular cross-power spectrum
     R = fft_end * np.conj(fft_beg)
     R /= np.maximum(np.abs(R), 1e-10)  # evitar divisão por zero

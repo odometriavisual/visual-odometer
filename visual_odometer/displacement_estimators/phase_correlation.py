@@ -60,7 +60,7 @@ def phase_correlation_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np
         
     References
     ----------
-    .. [1] Foroosh, H., Zerubia, J. B., & Berthod, M. (2002). Extension of phase correlation to subpixel registration. IEEE transactions on image processing, 11(3), 188-200.
+    .. [1] Foroosh, H., Zerubia, J. B., & Berthod, M. (2002). Extension of phase correlation to subpixel registration. IEEE transactions on image processing, 11(3), 188-200. :doi:`10.1109/83.988953`
     
     """
 

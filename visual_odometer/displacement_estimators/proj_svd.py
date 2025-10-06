@@ -36,7 +36,7 @@ def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: fl
         
     References
     ----------
-    .. [1] Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133.
+    .. [1] Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133. :doi:`10.1016/j.sigpro.2006.04.013`
     """
 
     Cn_t = np.fft.ifft2(CPS)
