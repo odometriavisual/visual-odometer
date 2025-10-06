@@ -94,7 +94,7 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing: str = "", unwr
         
     References
     ----------
-    .. [1] Hoge, W. S. (2003). A subspace identification extension to the phase correlation method [MRI application]. IEEE transactions on medical imaging, 22(2), 277-280.
+    .. [1] Hoge, W. S. (2003). A subspace identification extension to the phase correlation method [MRI application]. IEEE transactions on medical imaging, 22(2), 277-280. :doi:`10.1109/TMI.2002.808359`
     """
     Q = normalized_cps(fft_beg, fft_end)
 

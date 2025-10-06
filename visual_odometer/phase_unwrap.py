@@ -51,7 +51,7 @@ def itoh1982_method(phase_vec: NDArray[np.float32], factor: float = 0.7) -> NDAr
         
     References
     ----------
-    .. [1] Itoh, K. (1982). Analysis of the phase unwrapping algorithm. Applied optics, 21(14), 2470-2470.
+    .. [1] Itoh, K. (1982). Analysis of the phase unwrapping algorithm. Applied optics, 21(14), 2470-2470. :doi:`10.1364/AO.21.002470`
     """
     phase_diff = np.diff(phase_vec)
     corrected_difference = phase_diff - 2. * np.pi * (phase_diff > (2 * np.pi * factor)) + 2. * np.pi * (
