@@ -1,42 +1,38 @@
-import os
 import numpy as np
-from numpy.fft import fft2, ifft2
+import os
 import cv2
 import time
 import pandas
+from numpy.typing import NDArray
 from PIL import Image, ImageOps
 
+IMG_FILE_EXTENSIONS = ('.jpg', '.jpeg', '.png')
 
-IMG_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png']
 
-
-def load_img(filename):
+def load_img(filename: str) -> NDArray[np.uint8]:
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
-    return np.array(img_grayscale)
+    return np.array(img_grayscale, dtype=np.uint8)
 
-def subpixel_shift(imagem, dx, dy, janela=None):
-    h, w = imagem.shape
-    imagem_f = imagem.astype(np.float64)
 
-    if janela is not None:
-        imagem_f *= janela
+def apply_subpixel_shift(img: NDArray, dx: float, dy: float) -> NDArray:
+    h, w = img.shape
+    img = img.astype(np.float64)
 
     fx = np.fft.fftfreq(w)
     fy = np.fft.fftfreq(h)
     FX, FY = np.meshgrid(fx, fy)
-    fase = np.exp(-2j * np.pi * (FX * dx + FY * dy))
-    I_fft = fft2(imagem_f)
-    I_deslocada = ifft2(I_fft * fase)
-    return np.real(I_deslocada)
+    phase = np.exp(-2j * np.pi * (FX * dx + FY * dy))
+    shifted_spectrum = np.fft.fft2(img)
+    return np.real(np.fft.ifft2(shifted_spectrum * phase))
 
 
-def add_gaussian_noise(img, sigma=10):
+def add_gaussian_noise(img: NDArray, sigma:float =10.):
     noise = np.random.normal(0, sigma, img.shape)
     return img + noise
 
 
-def add_salt_and_pepper(img, amount=90 / 100, s_vs_p=0.5):
+def add_salt_and_pepper(img: NDArray, amount: float = 90 / 100, s_vs_p: float=0.5) -> NDArray:
     noisy = img.copy()
     num_salt = np.ceil(amount * img.size * s_vs_p)
     coords = (np.random.randint(0, img.shape[0], int(num_salt)),
@@ -50,7 +46,7 @@ def add_salt_and_pepper(img, amount=90 / 100, s_vs_p=0.5):
     return noisy
 
 
-def add_lens_blur(img, blur_kernel=(21, 21), feather=100):
+def add_lens_blur(img: NDArray, blur_kernel: tuple[int, int]=(21, 21), feather: int=100) -> NDArray:
     rows, cols = img.shape[:2]
     mask = np.zeros((rows, cols), dtype=np.float32)
     cv2.circle(mask, (cols // 2, rows // 2), min(rows, cols) // 2, 1, -1)
@@ -63,11 +59,11 @@ def add_lens_blur(img, blur_kernel=(21, 21), feather=100):
     return blended
 
 
-def add_full_blur(img, blur_kernel=(7, 7)):
+def add_full_blur(img: NDArray, blur_kernel: tuple[int, int]=(7, 7)) -> NDArray:
     return cv2.GaussianBlur(img, blur_kernel, 0)
 
-def create_datasets(data_root : str, overwrite: bool = False, verbose: bool = True) -> pandas.DataFrame:
 
+def create_datasets(data_root: str, overwrite: bool = False, verbose: bool = True):
     inspections = [
         name for name in os.listdir(data_root)
         if os.path.isdir(os.path.join(data_root, name))
@@ -78,6 +74,7 @@ def create_datasets(data_root : str, overwrite: bool = False, verbose: bool = Tr
 
     # Read images:
     t0 = time.time()
+
     for i, inspection in enumerate(inspections):
         data = {
             "inspection": [],
@@ -127,9 +124,10 @@ def create_datasets(data_root : str, overwrite: bool = False, verbose: bool = Tr
                 f"Elapsed time: {time.time() - t0:.1f} s",
                 end="\r"
             )
-    return dataset_df
+        return None
 
-def get_available_datasets(data_root: str, verbose: bool=False) -> list:
+
+def get_available_datasets(data_root: str, verbose: bool = False) -> list:
     valid_datasets = [
         name for name in os.listdir(data_root)
         if os.path.isdir(os.path.join(data_root, name))
