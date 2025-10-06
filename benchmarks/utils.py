@@ -68,7 +68,7 @@ def add_gaussian_noise(img: NDArray, sigma:float =10.):
     img: NDArray
         Original pristine image.
     sigma: float
-        Standard-deviation of the Gaussian noise.
+        Standard-deviation of the Gaussian noise, by default 10.
 
     Returns
     -------
@@ -89,9 +89,9 @@ def add_salt_and_pepper(img: NDArray, amount: float = 90 / 100, s_vs_p: float=0.
     img: NDArray
         Original pristine image.
     amount: float
-        Percentage of salt and pepper noise.
+        Percentage of salt and pepper noise, by default 0.9 or 90%.
     s_vs_p: float
-        Proportion between salt (white pixels) and pepper (black pixels).
+        Proportion between salt (white pixels) and pepper (black pixels), by default 0.5 or 50%.
 
     Returns
     -------
@@ -126,9 +126,9 @@ def add_lens_blur(img: NDArray, blur_kernel: tuple[int, int]=(21, 21), feather: 
     img: NDArray
         Original pristine image.
     blur_kernel: tuple[int, int]
-        Gaussian kernel size of to be applied along the region around the circular center.
+        Gaussian kernel size of to be applied along the region around the circular center, by default (21, 21).
     feather
-        Transition between pristine (central region) and distorted (peripheral region).
+        Transition between pristine (central region) and distorted (peripheral region), by default 100.
 
     Returns
     -------
@@ -157,7 +157,7 @@ def add_full_blur(img: NDArray, blur_kernel: tuple[int, int]=(7, 7)) -> NDArray:
     img: NDArray
         Original pristine image.
     blur_kernel: tuple[int, int]
-        Gaussian kernel size.
+        Gaussian kernel size, by default (7, 7).
 
     Returns
     -------
@@ -183,9 +183,9 @@ def create_datasets(data_root: str, overwrite: bool = False, verbose: bool = Tru
     data_root: str
         Path to the folder containing the acquisition data.
     overwrite: bool
-        Whether to overwrite existing pickled files.
+        Whether to overwrite existing pickled files, by default False.
     verbose: bool
-        Whether to print progress messages.
+        Whether to print progress messages, by default True.
 
     Returns
     -------
@@ -265,7 +265,7 @@ def get_available_datasets(data_root: str, verbose: bool = False) -> list:
     data_root: str
         Path to the root folder containing the folders with acquisition data.
     verbose: bool
-        Whether to print progress messages.
+        Whether to print progress messages, by default False.
 
     Returns
     -------
