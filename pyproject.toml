@@ -14,17 +14,25 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["visual_odometer"]
 
 [project.optional-dependencies]
+# For running benchmarks and developing new functionalities:
 dev = [
+    "pandas",
+    "matplotlib",
+    "opencv-python"
+]
+
+# For running tests:
+test = [
     "pytest>=8.0.0",
     "pytest-cov",
     "pytest-timeout",
     "pytest-xdist",
-    "pandas",
-
 ]
+
+# For compiling documentation:
 doc = [
     "sphinx>=5.0.0,<8.2.0",
     "intersphinx_registry",
@@ -41,3 +49,7 @@ doc = [
     "linkify-it-py",
     "tabulate"
 ]
+
+[project.urls]
+source = "https://github.com/odometriavisual/visual-odometer"
+download = "https://github.com/odometriavisual/visual-odometer/releases"
