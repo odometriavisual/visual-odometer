@@ -10,12 +10,44 @@ IMG_FILE_EXTENSIONS = ('.jpg', '.jpeg', '.png')
 
 
 def load_img(filename: str) -> NDArray[np.uint8]:
+    """
+    Load an image from the given filename and convert to a NDArray.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the image file.
+
+    Returns
+    -------
+    NDArray[np.uint8]
+        Image file converted to grayscale.
+
+    """
     img_array_rgb = Image.open(filename)
     img_grayscale = ImageOps.grayscale(img_array_rgb)
     return np.array(img_grayscale, dtype=np.uint8)
 
 
 def apply_subpixel_shift(img: NDArray, dx: float, dy: float) -> NDArray:
+    """
+    Create an image with a subpixel shift applied compared to the original image.
+
+    Parameters
+    ----------
+    img: NDArray
+        Original image.
+    dx: float
+        Subpixel shift along horizontal axis (x-axis).
+    dy: float
+        Subpixel shift along vertical axis (y-axis).
+
+    Returns
+    -------
+    NDArray
+        Image with subpixel shift applied along both axes.
+
+    """
     h, w = img.shape
     img = img.astype(np.float64)
 
@@ -28,11 +60,49 @@ def apply_subpixel_shift(img: NDArray, dx: float, dy: float) -> NDArray:
 
 
 def add_gaussian_noise(img: NDArray, sigma:float =10.):
+    """
+    Add Gaussian noise to an image.
+
+    Parameters
+    ----------
+    img: NDArray
+        Original pristine image.
+    sigma: float
+        Standard-deviation of the Gaussian noise.
+
+    Returns
+    -------
+    NDArray
+        Image with additive Gaussian noise.
+
+    """
     noise = np.random.normal(0, sigma, img.shape)
     return img + noise
 
 
 def add_salt_and_pepper(img: NDArray, amount: float = 90 / 100, s_vs_p: float=0.5) -> NDArray:
+    """
+    Add salt and pepper noise to an image [1]_.
+
+    Parameters
+    ----------
+    img: NDArray
+        Original pristine image.
+    amount: float
+        Percentage of salt and pepper noise.
+    s_vs_p: float
+        Proportion between salt (white pixels) and pepper (black pixels).
+
+    Returns
+    -------
+    NDArray
+        Image with salt and pepper noise.
+
+    References
+    ----------
+    .. [1] Gonzalez, R. C. (2009). Digital image processing. Pearson education india.
+
+    """
     noisy = img.copy()
     num_salt = np.ceil(amount * img.size * s_vs_p)
     coords = (np.random.randint(0, img.shape[0], int(num_salt)),
@@ -47,6 +117,25 @@ def add_salt_and_pepper(img: NDArray, amount: float = 90 / 100, s_vs_p: float=0.
 
 
 def add_lens_blur(img: NDArray, blur_kernel: tuple[int, int]=(21, 21), feather: int=100) -> NDArray:
+    """
+    Add lens blur to an image. This blur is the result of a Gaussian filter around the peripheral region of the image,
+    where the central region (given by a circle) is preserved.
+
+    Parameters
+    ----------
+    img: NDArray
+        Original pristine image.
+    blur_kernel: tuple[int, int]
+        Gaussian kernel size of to be applied along the region around the circular center.
+    feather
+        Transition between pristine (central region) and distorted (peripheral region).
+
+    Returns
+    -------
+    NDArray
+        Image with lens blur.
+
+    """
     rows, cols = img.shape[:2]
     mask = np.zeros((rows, cols), dtype=np.float32)
     cv2.circle(mask, (cols // 2, rows // 2), min(rows, cols) // 2, 1, -1)
@@ -60,10 +149,49 @@ def add_lens_blur(img: NDArray, blur_kernel: tuple[int, int]=(21, 21), feather: 
 
 
 def add_full_blur(img: NDArray, blur_kernel: tuple[int, int]=(7, 7)) -> NDArray:
+    """
+    Apply a homogenous blur to an image [1]_.
+
+    Parameters
+    ----------
+    img: NDArray
+        Original pristine image.
+    blur_kernel: tuple[int, int]
+        Gaussian kernel size.
+
+    Returns
+    -------
+    NDArray
+        Image blurred image.
+
+    References
+    ----------
+    .. [1] Gonzalez, R. C. (2009). Digital image processing. Pearson education india.
+
+    """
     return cv2.GaussianBlur(img, blur_kernel, 0)
 
 
-def create_datasets(data_root: str, overwrite: bool = False, verbose: bool = True):
+def create_datasets(data_root: str, overwrite: bool = False, verbose: bool = True) -> None:
+    """
+    Creates a set of pickled files containing images from a visual-odometer data acquisition. ``data_root`` is a path
+    where there are a set of folders containing photos from the acquisition; for each folder a different pickled file is
+    created. The pickled file contains the images, inertial-unit information and calibration data.
+
+    Parameters
+    ----------
+    data_root: str
+        Path to the folder containing the acquisition data.
+    overwrite: bool
+        Whether to overwrite existing pickled files.
+    verbose: bool
+        Whether to print progress messages.
+
+    Returns
+    -------
+    None
+
+    """
     inspections = [
         name for name in os.listdir(data_root)
         if os.path.isdir(os.path.join(data_root, name))
@@ -124,10 +252,27 @@ def create_datasets(data_root: str, overwrite: bool = False, verbose: bool = Tru
                 f"Elapsed time: {time.time() - t0:.1f} s",
                 end="\r"
             )
-        return None
+    return None
 
 
 def get_available_datasets(data_root: str, verbose: bool = False) -> list:
+    """
+    Get all valid pickled datasets files at ``data_root``. Each pickled file contains images from a visual-odometer
+    acquisition, as well as calibration and inertial-unit information.
+
+    Parameters
+    ----------
+    data_root: str
+        Path to the root folder containing the folders with acquisition data.
+    verbose: bool
+        Whether to print progress messages.
+
+    Returns
+    -------
+    list
+        List of valid folders where valid pickled files exist.
+
+    """
     valid_datasets = [
         name for name in os.listdir(data_root)
         if os.path.isdir(os.path.join(data_root, name))
