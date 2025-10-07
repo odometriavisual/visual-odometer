@@ -66,14 +66,18 @@ def apply_raised_cosine_window(img: NDArray) -> NDArray:
 
 def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float) -> NDArray:
     """
-    General formulation for a Blackman-Harris window, i.e. 
-    
-    w(n) = a0 - a1 · cos(2πn / (N - 1)) + a2 · cos(4πn / (N - 1)) - a3 · cos(6πn / (N - 1)),
-    
+    General formulation for a Blackman-Harris window.
+
+    .. math::
+
+        w(n) = a_0 - a_1 \cos\Big(\dfrac{2 \pi n}{N-1}\Big) + a_2 \cos\Big(\dfrac{4 \pi n}{N-1}\Big) - a_3 \cos\Big(\dfrac{6 \pi n}{N-1}\Big)
+
+
     where:
-    - n is the sample index: n = 0, 1, ..., N - 1
-    - N is the total number of samples in the window
-    - a0, a1, a2, a3 are real-valued coefficients 
+
+    - :math:`n` is the sample index: :math:`n = 0, 1, \dots, N-1`
+    - :math:`N` is the total number of samples in the window
+    - :math:`a_0, a_1, a_2, a_3` are real-valued coefficients
     
     Parameters
     ----------
@@ -136,7 +140,13 @@ def apply_blackman_harris_window(img: NDArray,
 
 def crop_two_imgs_with_displacement(imgA: NDArray, imgB: NDArray, dx: float, dy: float) -> NDArray:
     """
-    Crops two image to preserve the intersection region, assuming imgA is imgB spatially shifted by dx and dy, i.e. imgA[y, x] = imgB[y - dy, x - dx].
+    Crop two images to preserve only their overlapping region.
+
+    Assumes that `imgA` is a spatially shifted version of `imgB` by `(dx, dy)`, i.e.,
+
+    .. math::
+
+        \mathrm{imgA}[y, x] = \mathrm{imgB}[y - dy, x - dx]
 
     Parameters
     ----------
@@ -187,7 +197,17 @@ def crop_two_imgs_with_displacement(imgA: NDArray, imgB: NDArray, dx: float, dy:
 # Normalized cross-power spectrum:
 def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: float = 1e-10) -> NDArray[np.complex64]:
     """
-    Normalized Cross Power Spectrum (CPS). F and G are two same size spectra, thus both are complex matrices.
+    Compute the Normalized Cross Power Spectrum (CPS) between two spectra.
+
+    F and G are two complex matrices of the same size.
+
+    The CPS is defined as:
+
+    .. math::
+
+        \mathrm{CPS}(F, G) = \dfrac{F \odot G^*}{|F \odot G^*|}
+
+    where :math:`G^*` denotes the complex conjugate of :math:`G` and :math:`\odot` the element-wise product (Hadamard product) [1]_.
 
     Parameters
     ----------
@@ -202,6 +222,10 @@ def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: 
     -------
     NDArray[np.complex64]
         Cross-power spectrum between spectra of f(x, y) and g(x, y)
+
+    References
+    ----------
+    .. [1] Wikipedia contributors. (2024, September 6). *Cross-spectral density*. In *Wikipedia*. `https://en.wikipedia.org/wiki/Spectral_density#Cross-spectral_density`
     """
     
     Q = F * np.conj(G)

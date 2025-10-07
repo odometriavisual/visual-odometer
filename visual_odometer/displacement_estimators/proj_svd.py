@@ -98,8 +98,8 @@ def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex6
         
     References
     ----------
-    
     .. [1] Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133.
+
     """
     
     Q = normalized_cps(fft_beg, fft_end)
