@@ -9,14 +9,14 @@ def phase_unwrap(phase_wrapped: NDArray[np.float32], method: str = "itoh1982") -
     Parameters
     ----------
     phase_wrapped : NDArray[np.float32]
-         A 1-D Array representing the wrapped phase values ranging from -2pi to 2pi.
+         A 1-D Array representing the wrapped phase values that is limited to :math:`-2\pi` and :math:`+2\pi` interval.
     method : str, optional
         Phase unwrapping method, by default "itoh1982"
 
     Returns
     -------
     NDArray[np.float32]
-        A 1-D Array representing unwrapped phase values ranging from -infinity to infinity.
+        A 1-D Array representing unwrapped phase values that could range from :math:`-\infty` to :math:`+\infty`.
 
     Raises
     ------
