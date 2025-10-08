@@ -273,11 +273,11 @@ def get_available_datasets(data_root: str, verbose: bool = False) -> list:
         List of valid folders where valid pickled files exist.
 
     """
-    valid_datasets = [
+    valid_datasets = sorted([
         name for name in os.listdir(data_root)
         if os.path.isdir(os.path.join(data_root, name))
            and os.path.exists(os.path.join(data_root, name, "dataset.pkl"))
-    ]
+    ])
     if verbose:
         print("List of valid datasets: \n", valid_datasets)
     return valid_datasets
