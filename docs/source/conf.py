@@ -20,6 +20,7 @@ release = '0.4.0'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+'sphinx_toolbox.more_autodoc',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
@@ -27,6 +28,8 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
+
+    'sphinx_toolbox.more_autodoc',
 ]
 
 bibtex_bibfiles = ['refs.bib']

@@ -1,5 +1,6 @@
 sphinx>=5.0.0,<8.2.0
 sphinxcontrib-bibtex
+sphinx-toolbox
 intersphinx_registry
 pydata-sphinx-theme>=0.15.2
 sphinx-copybutton
