@@ -35,6 +35,7 @@ test = [
 # For compiling documentation:
 doc = [
     "sphinx>=5.0.0,<8.2.0",
+    "sphinx-toolbox",
     "sphinxcontrib-bibtex",
     "intersphinx_registry",
     "pydata-sphinx-theme>=0.15.2",
