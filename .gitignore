@@ -8,6 +8,8 @@
 .idea
 data
 visual-odometer-config.json
+docs/_build
+build
 
 # Created by https://www.gitignore.io/api/intellij
 
