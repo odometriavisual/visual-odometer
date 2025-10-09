@@ -1,4 +1,5 @@
 sphinx>=5.0.0,<8.2.0
+scipy
 sphinxcontrib-bibtex
 sphinx-toolbox
 intersphinx_registry

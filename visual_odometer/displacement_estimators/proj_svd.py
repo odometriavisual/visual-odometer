@@ -10,12 +10,14 @@ from .svd import svd_estimate_shift
 def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: float, dx_max: float, dy_min: float,
                                   dy_max: float, keep_dim: bool = False) -> NDArray[np.complex64]:
     """
-    Apply time-domain filtering on the cross-power spectrum between the spectra of I_beg and I_end where I_end = I_beg[y - dy, x - dx];
+    Apply time-domain filtering on the cross-power spectrum between the spectra of :math:`I_{beg}[y, x]` and
+    :math:`I_{beg}[y, x]` where :math:`I_{end}[y,x]=I_{beg}[y - \Delta y, x - \Delta x]` :cite:`keller_projection-based_2007`.
 
     Parameters
     ----------
     CPS : NDArray[np.complex64]
-        A 2-D Array with complex-valued entries representing the result of cross-power spectrum operation between I_beg and I_end. The CPS zero-frequency is at the image center (it was fftshifted). 
+        A 2-D Array with complex-valued entries representing the result of cross-power spectrum operation between
+        :math:`I_{beg}[y, x]` and :math:`I_{end}[y, x]`. The `CPS` zero-frequency is at the image center (it was fftshifted).
     R : int
         Safe margin between maximum detectable displacement dx and dy.
     dx_min : float
@@ -27,16 +29,16 @@ def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: fl
     dy_max : float
         Maximum detectable displacement along vertical axis.
     keep_dim : bool, optional
-        Wheter to keep the dimensions of the original image or discard filtered values during low-pass filtering, by default False
+        Whether to keep the dimensions of the original image or discard filtered values during low-pass filtering, by default False
 
     Returns
     -------
     NDArray[np.complex64]
-        Filtered CPS.
+        Filtered `CPS`.
         
     References
     ----------
-    .. [1] Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133. :doi:`10.1016/j.sigpro.2006.04.013`
+     :cite:`keller_projection-based_2007` Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133. :doi:`10.1016/j.sigpro.2006.04.013`
     """
 
     Cn_t = np.fft.ifft2(CPS)
@@ -58,20 +60,24 @@ def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: fl
 
 
 def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex64], M: int, N: int, R: int = 6, dx_min: int=0, dx_max: int=64, dy_min: int=0, dy_max: int=48,
-                    phase_windowing: str = "", unwrap_method: str = "itoh1982") -> tuple[float, float]:
+                    phase_windowing  = None, unwrap_method  = "itoh1982") -> tuple[float, float]:
     """
-    Estimate displacement between two spatialy shifted images, i.e.:
-    
-    I_end[y, x] = I_beg[y - dy, x - dx]
-    
-    where fft_beg = FFT(I_beg) and fft_end = FFT(I_end), by using projection-based phase correlation [1]_.
+    Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
+
+    .. math::
+
+        I_{end}[y, x] = I_{beg}[y - \Delta y, x - \Delta x]
+
+    where `fft_beg` is :math:`\mathcal{F}\{ I_{beg}[y, x]\} (u, v)` and `fft_end` is :math:`\mathcal{F}\{ I_{end}[y, x]\} (u, v)`.
+
+    The algorithm behind the estimation it is the projection-based phase correlation :cite:`keller_projection-based_2007`.
 
     Parameters
     ----------
     fft_beg : NDArray[np.complex64]
-        _description_
+        A 2-D array representing the spectrum of :math:`I_{beg}[y, x]`
     fft_end : NDArray[np.complex64]
-        _description_
+        A 2-D array representing the spectrum of :math:`I_{end}[y,x]`
     M : int
         Number of rows of the original image.
     N : int
@@ -86,19 +92,19 @@ def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex6
         Minimum expected vertical displacement (y-axis), by default 0
     dy_max : int, optional
         Maximum expected vertical displacement (y-axis), by default 48
-    phase_windowing : str, optional
-        Type of window to be applied on the cross-power spectrum phase, by default ""
-    unwrap_method : str, optional
+    phase_windowing : {}, optional
+        Type of window to be applied on the cross-power spectrum phase, by default None
+    unwrap_method : {"itoh1982", "numpy"}, optional
         Phase unwrapping method, by default "itoh1982"
 
     Returns
     -------
     tuple[float, float]
-        Horizontal and vertical (x and y) displacement values, assuming I[y, x].
+        Horizontal and vertical displacement values :math:`[\Delta y, \Delta x]^T`, assuming :math:`I[y, x]`.
         
     References
     ----------
-    .. [1] Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133.
+    :cite:`keller_projection-based_2007` Keller, Y., & Averbuch, A. (2007). A projection-based extension to phase correlation image alignment. Signal processing, 87(1), 124-133.
 
     """
     

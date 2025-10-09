@@ -7,6 +7,12 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
 
+# conf.py
+import os
+import sys
+
+# Ensure current directory (where conf.py and doi_role.py live) is on sys.path
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -20,7 +26,8 @@ release = '0.4.0'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-'sphinx_toolbox.more_autodoc',
+    'doi_role',
+    'sphinx_toolbox.more_autodoc',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
@@ -28,11 +35,10 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
-
-    'sphinx_toolbox.more_autodoc',
 ]
 
-bibtex_bibfiles = ['refs.bib']
+bibtex_bibfiles = ['references.bib']
+bibtex_default_style = 'plain'
 
 templates_path = ['_templates']
 exclude_patterns = []

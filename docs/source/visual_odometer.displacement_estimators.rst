@@ -12,10 +12,3 @@ Submodules
    visual_odometer.displacement_estimators.proj_svd
    visual_odometer.displacement_estimators.svd
 
-Module contents
----------------
-
-.. automodule:: visual_odometer.displacement_estimators
-   :members:
-   :undoc-members:
-   :show-inheritance:
