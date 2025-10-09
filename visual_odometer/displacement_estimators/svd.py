@@ -8,7 +8,10 @@ from ..dsp import normalized_cps
 
 def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[float, float]:
     """
-    Linear regression assuming y(x) = mu*x + c.
+    Linear regression assuming
+
+    .. math::
+        y(x) = \mu x + c
 
     Parameters
     ----------
@@ -20,7 +23,7 @@ def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[f
     Returns
     -------
     tuple[float, float]
-        Angular (mu) and linear (c) coefficients of the slope.
+        Angular (:math:`\mu`) and linear (:math:`c`) coefficients of the slope.
     """
     R = np.ones((x.size, 2))
     R[:, 0] = x
@@ -29,7 +32,7 @@ def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[f
     return mu, c
 
 
-def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing: str = "") -> float:
+def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing = None) -> float:
     """
     Estimate from a 1-D phase vector the space displacement.
 
@@ -38,63 +41,77 @@ def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing: 
     phase_vec : NDArray[np.float32]
         A 1-D Array representing unwrapped phase vector.
     N : int
-        Size of the original image size (horizontal or vertical) which the displacement is beeing estimated on.
-    phase_windowing : str, optional
-        Type of windowing applied to the phase vector to extract, by default ""
+        Size of the original image size (horizontal or vertical) which the displacement is being estimated on.
+    phase_windowing : {"central", "initial", None}, optional
+        Type of windowing applied to the phase vector to extract, by default None
 
     Returns
     -------
     float
         Horizontal or vertical displacement proportional to the phase slope, assuming linear phase.
+
+    Raises
+    ------
+    ValueError
+        If the ``method`` is not among the implemented windowing methods.
+
     """
     r = np.arange(0, phase_vec.size)
     M = r.size // 2
 
-    if phase_windowing == "central":
-        x = r[M - 50:M + 50]
-        y = phase_vec[M - 50:M + 50]
-    elif phase_windowing == "initial":
-        x = r[M - 80:M - 10]
-        y = phase_vec[M - 80:M - 10]
-    else:
-        x = r
-        y = phase_vec
+    match phase_windowing:
+        case "central":
+            x = r[M - 50:M + 50]
+            y = phase_vec[M - 50:M + 50]
+        case "initial":
+            x = r[M - 80:M - 10]
+            y = phase_vec[M - 80:M - 10]
+        case None:
+            x = r
+            y = phase_vec
+        case _:
+            raise ValueError(f"Invalid windowing method: {phase_windowing}")
+
 
     mu, _ = linear_regression(x, y)
     return mu * N / (2 * np.pi)
 
 
-def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing: str = "", unwrap_method: str = 'itoh1982') -> tuple[float, float]:
+def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_method = 'itoh1982') -> tuple[float, float]:
     """
-    Estimate displacement between two spatialy shifted images, i.e.:
-    
-    I_end[y, x] = I_beg[y - dy, x - dx]
-    
-    where fft_beg = FFT(I_beg) and fft_end = FFT(I_end), by using subspace identification extension to the phase correlation method [1]_.
+    Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
+
+    .. math::
+
+        I_{end}[y, x] = I_{beg}[y - \Delta y, x - \Delta x]
+
+    where `fft_beg` is :math:`\mathcal{F}\{ I_{beg}[y, x]\} (u, v)` and `fft_end` is :math:`\mathcal{F}\{ I_{end}[y, x]\} (u, v)`.
+
+    The algorithm behind the estimation it is subspace identification extension to the phase correlation method :cite:`hoge_subspace_2003`.
 
     Parameters
     ----------
-    fft_beg : _type_
-         A 2-D array represeting the spectrum of I_beg
-    fft_end : _type_
-         A 2-D array represeting the spectrum of I_end
+    fft_beg : NDArray[np.complex64]
+        A 2-D array representing the spectrum of :math:`I_{beg}[y, x]`
+    fft_end : NDArray[np.complex64]
+        A 2-D array representing the spectrum of :math:`I_{end}[y,x]`
     M : int
         Number of rows of the original image.
     N : int
         Number of columns of the original image.
-    phase_windowing : str, optional
-        Type of window to be applied on the cross-power spectrum phase, by default ""
-    unwrap_method : str, optional
-        Phase unwrapping method, by default "itoh1982"
+    phase_windowing : {"central", "initial", None}, optional
+        Type of windowing applied to the phase vector to extract, by default None
+    unwrap_method : {"itoh1982", "numpy"}, optional
+        Phase unwrapping method, by default "itoh1982".
 
     Returns
     -------
     tuple[float, float]
-        Horizontal and vertical (x and y) displacement values, assuming I[y, x].
+        Horizontal and vertical displacement values :math:`[\Delta y, \Delta x]^T`, assuming :math:`I[y, x]`.
         
     References
     ----------
-    .. [1] Hoge, W. S. (2003). A subspace identification extension to the phase correlation method [MRI application]. IEEE transactions on medical imaging, 22(2), 277-280. :doi:`10.1109/TMI.2002.808359`
+    :cite:`hoge_subspace_2003` Hoge, W. S. (2003). A subspace identification extension to the phase correlation method [MRI application]. IEEE transactions on medical imaging, 22(2), 277-280. :doi:`10.1109/TMI.2002.808359`
     """
     Q = normalized_cps(fft_beg, fft_end)
 

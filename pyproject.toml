@@ -50,7 +50,8 @@ doc = [
     "jupyterlite-pyodide-kernel",
     "linkify-it-py",
     "tabulate",
-    "sphinx-rtd-theme"
+    "sphinx-rtd-theme",
+    "scipy",
 ]
 
 [project.urls]

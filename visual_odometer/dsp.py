@@ -207,7 +207,7 @@ def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: 
 
         \mathrm{CPS}(F, G) = \dfrac{F \odot G^*}{|F \odot G^*|}
 
-    where :math:`G^*` denotes the complex conjugate of :math:`G` and :math:`\odot` the element-wise product (Hadamard product) [1]_.
+    where :math:`G^*` denotes the complex conjugate of :math:`G` and :math:`\odot` the element-wise product (Hadamard product) :cite:`wikipedia_spectral_2025`.
 
     Parameters
     ----------
@@ -225,7 +225,7 @@ def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: 
 
     References
     ----------
-    .. [1] Wikipedia contributors. (2024, September 6). *Cross-spectral density*. In *Wikipedia*. `https://en.wikipedia.org/wiki/Spectral_density#Cross-spectral_density`
+    :cite:`wikipedia_spectral_2025` Wikipedia contributors. (2024, September 6). *Cross-spectral density*. In *Wikipedia*. `https://en.wikipedia.org/wiki/Spectral_density#Cross-spectral_density`
     """
     
     Q = F * np.conj(G)

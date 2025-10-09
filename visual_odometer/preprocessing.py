@@ -8,7 +8,7 @@ from PIL import Image
 from .dsp import *
 
 
-def apply_spatial_window(img: NDArray, method: str, params: dict) -> NDArray:
+def apply_spatial_window(img: NDArray, method, params: dict) -> NDArray:
     """
     Interface that can apply different types of spatial windows.
 
@@ -16,7 +16,7 @@ def apply_spatial_window(img: NDArray, method: str, params: dict) -> NDArray:
     ----------
     img : NDArray
         A 2-D array which represents the image to be windowed.
-    method : str
+    method : {"blackman-harris", "raised-cosine", None}
         Which spatial window to be applied.
     params : dict
         Parameters related to the chosen window.
@@ -44,7 +44,7 @@ def apply_spatial_window(img: NDArray, method: str, params: dict) -> NDArray:
             raise ValueError(f'Invalid spatial window method: {method}')
 
 
-def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> NDArray[np.float32]:
+def apply_downsampling(img: NDArray[np.float32], method, params: dict) -> NDArray[np.float32]:
     """
     Interface that can apply different types of downsampling algorithms.
 
@@ -52,7 +52,7 @@ def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> N
     ----------
     img : NDArray[np.float32]
         A 2-D array which represents the image to be downsampled.
-    method : str
+    method :  {“NN”, “bilinear”, "bicubic", None}
         Which downsample algorithm to be applied.
     params : dict
         Parameters related to the specific downsample algorithm.
@@ -84,7 +84,7 @@ def apply_downsampling(img: NDArray[np.float32], method: str, params: dict) -> N
             raise ValueError(f"Invalid downsampling method: {method}")
 
 
-def apply_frequency_window(spectrum: NDArray[np.complex64], method: str, params: dict) -> NDArray[np.complex64]:
+def apply_frequency_window(spectrum: NDArray[np.complex64], method, params: dict) -> NDArray[np.complex64]:
     """
     Interface that can apply different types of frequency windows.
 
@@ -92,7 +92,7 @@ def apply_frequency_window(spectrum: NDArray[np.complex64], method: str, params:
     ----------
     spectrum : NDArray[np.complex64]
         A 2-D array which represents the image to be windowed.
-    method : str
+    method : {“Stone_et_al_2001”, “ideal-lowpass”, None}
         Which frequency window to be applied.
     params : dict
         Parameters related to the chosen window.

@@ -8,7 +8,6 @@ visual-odometer documentation
 
 This is the documentation for the visual-odometer repository.
 
-
 ----
 
 .. toctree::
@@ -17,12 +16,8 @@ This is the documentation for the visual-odometer repository.
    :caption: Documentation
 
    visual_odometer
-----
 
 
 .. rubric:: References
 
 .. bibliography::
-   :cited:
-   :labelprefix: A
-   :keyprefix: a-
