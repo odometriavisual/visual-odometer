@@ -14,11 +14,6 @@ class VisualOdometer:
     """
     The class implementing the visual odometer.
 
-    The visual odometer works both with the CPU and CUDA GPUS:
-        To work with the CPU pass the image as numpy arrays.
-        To work with the GPU pass the image as cupy arrays.
-        The API remains the same for both cases.
-
     The visual odometer is capable of woking in the "Single Shot" mode and in the "Sequential" mode
     In the "Single Shot" mode, the visual odometer outputs the displacement between a pair of images.
     In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
