@@ -9,7 +9,7 @@ from .svd import svd_estimate_shift
 
 def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: float, dx_max: float, dy_min: float,
                                   dy_max: float, keep_dim: bool = False) -> NDArray[np.complex64]:
-    """
+    r"""
     Apply time-domain filtering on the cross-power spectrum between the spectra of :math:`I_{beg}[y, x]` and
     :math:`I_{beg}[y, x]` where :math:`I_{end}[y,x]=I_{beg}[y - \Delta y, x - \Delta x]` :cite:`keller_projection-based_2007`.
 
@@ -61,7 +61,7 @@ def apply_projection_phase_filter(CPS: NDArray[np.complex64], R: int, dx_min: fl
 
 def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex64], M: int, N: int, R: int = 6, dx_min: int=0, dx_max: int=64, dy_min: int=0, dy_max: int=48,
                     phase_windowing  = None, unwrap_method  = "itoh1982") -> tuple[float, float]:
-    """
+    r"""
     Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
 
     .. math::

@@ -65,7 +65,7 @@ def apply_raised_cosine_window(img: NDArray) -> NDArray:
 
 
 def blackman_harris_window(size: int, a0: float, a1: float, a2: float, a3: float) -> NDArray:
-    """
+    r"""
     General formulation for a Blackman-Harris window.
 
     .. math::
@@ -139,7 +139,7 @@ def apply_blackman_harris_window(img: NDArray,
 
 
 def crop_two_imgs_with_displacement(imgA: NDArray, imgB: NDArray, dx: float, dy: float) -> NDArray:
-    """
+    r"""
     Crop two images to preserve only their overlapping region.
 
     Assumes that `imgA` is a spatially shifted version of `imgB` by `(dx, dy)`, i.e.,
@@ -196,7 +196,7 @@ def crop_two_imgs_with_displacement(imgA: NDArray, imgB: NDArray, dx: float, dy:
 
 # Normalized cross-power spectrum:
 def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: float = 1e-10) -> NDArray[np.complex64]:
-    """
+    r"""
     Compute the Normalized Cross Power Spectrum (CPS) between two spectra.
 
     F and G are two complex matrices of the same size.

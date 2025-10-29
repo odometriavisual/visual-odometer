@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 
 
 def phase_unwrap(phase_wrapped: NDArray[np.float32], method = "itoh1982") -> NDArray[np.float32]:
-    """
+    r"""
     Interface for applying different types of phase unwrapping algorithms.
 
     Parameters
@@ -34,7 +34,7 @@ def phase_unwrap(phase_wrapped: NDArray[np.float32], method = "itoh1982") -> NDA
 
 
 def itoh1982_method(phase_vec: NDArray[np.float32], factor: float = 0.7) -> NDArray[np.float32]:
-    """
+    r"""
     Phase unwrapping method based on :cite:`itoh_analysis_1982`.
 
     Parameters

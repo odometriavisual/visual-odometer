@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 
 
 def subpixel_peak_position(corr_abs: NDArray[np.float32], method ="max") -> tuple[float, float]:
-    """
+    r"""
     Extract from the time-domain 2D correlation :math:`r[y,x]` the displacement value :math:`[\Delta y, \Delta x]^T`,
      assuming the correlation was performed between two shifted images :math:`f[y, x]` and :math:`g[y, x]`:
 
@@ -50,7 +50,7 @@ def subpixel_peak_position(corr_abs: NDArray[np.float32], method ="max") -> tupl
 
 
 def phase_correlation_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex64], method ='max') -> tuple[float, float]:
-    """
+    r"""
     Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
 
     .. math::

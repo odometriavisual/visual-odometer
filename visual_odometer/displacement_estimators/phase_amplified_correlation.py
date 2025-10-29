@@ -4,7 +4,7 @@ from .phase_correlation import subpixel_peak_position
 
 
 def phase_amplified_correlation_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex64], gain:int =0, method ='max') -> tuple[float, float]:
-    """
+    r"""
     Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
 
     .. math::

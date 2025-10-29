@@ -7,7 +7,7 @@ from ..dsp import normalized_cps
 
 
 def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[float, float]:
-    """
+    r"""
     Linear regression assuming
 
     .. math::
@@ -78,7 +78,7 @@ def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing =
 
 
 def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_method = 'itoh1982') -> tuple[float, float]:
-    """
+    r"""
     Estimate vertical and horizontal displacement vector :math:`[\Delta y, \Delta x]^T` between two spatially shifted spectra:
 
     .. math::
