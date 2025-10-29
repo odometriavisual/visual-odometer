@@ -3,12 +3,17 @@
 """
 
 from visual_odometer import VisualOdometer
+from PIL import Image, ImageOps
+import numpy as np
 import time
 
-from benchmarks.utils import load_img
+def load_img(filename):
+    img_array_rgb = Image.open(filename)
+    img_grayscale = ImageOps.grayscale(img_array_rgb)
+    return img_grayscale
 
-img0 = load_img('../datasets/dario_320x240/img.png') # image at t = t₀
-img1 = load_img('../datasets/dario_320x240/img_translated.png') # image at t = t₀ + Δt
+img0 = np.asarray(load_img('../datasets/dario_320x240/img.png')) # image at t = t₀
+img1 = np.asarray(load_img('../datasets/dario_320x240/img_translated.png')) # image at t = t₀ + Δt
 
 odometer = VisualOdometer(img_shape=img0.shape)
 odometer.save_config('./')
