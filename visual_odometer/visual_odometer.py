@@ -22,24 +22,18 @@ class VisualOdometer:
     def __init__(self, img_shape: (int, int), **kwargs):
         """
         Instantiates a visual odometer
+
         :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
         :param xres: Ratio of mm/pixels in the x dimension
         :param yres: Ratio of mm/pixels in the y dimension
-        :param displacement_estimation_method: Valid methods: "svd", "phase-correlation", "projection-svd", "phase-amplified-correlation"
-        Which displacement estimation method to be applied.
+        :param displacement_estimation_method:  Which displacement estimation method to be applied. Available methods: "svd", "phase-correlation", "projection-svd", "phase-amplified-correlation".
         :param reprocess_displacement: Set to True to enable double processing, double processing increases accuracy at the cost of processing time.
-        :param frequency_window_method: {“Stone_et_al_2001”, “ideal-lowpass”, None}
-        Which frequency window to be applied.
-        :param frequency_window_params:
-        Parameters related to the chosen window.
-        :param spatial_window_method: {"blackman-harris", "raised-cosine", None}
-        Which spatial window to be applied.
-        :param spatial_window_params:
-        Parameters related to the chosen window.
-        :param downsampling_method: {“NN”, “bilinear”, "bicubic", None}
-        Which downsample algorithm to be applied.
-        :param downsampling_params:
-        Parameters related to the specific downsample algorithm.
+        :param frequency_window_method: Which frequency window to be applied. Available methods: “Stone_et_al_2001”, “ideal-lowpass”, None
+        :param frequency_window_params: Parameters related to the chosen window.
+        :param spatial_window_method: Which spatial window to be applied. Available methods: "blackman-harris", "raised-cosine", None
+        :param spatial_window_params: Parameters related to the chosen window.
+        :param downsampling_method: Which downsample algorithm to be applied. Available methods: “NN”, “bilinear”, "bicubic", None
+        :param downsampling_params: Parameters related to the specific downsample algorithm.
         """
         # Default configs:
         self.configs = {

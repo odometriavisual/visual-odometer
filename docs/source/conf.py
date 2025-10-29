@@ -44,6 +44,7 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 source_suffix = '.rst'
+autoclass_content = 'both'
 
 # The master toctree document.
 master_doc = 'index'
