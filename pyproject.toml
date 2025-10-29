@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["visual_odometer"]
+include = [ "visual_odometer" ]
 
 [project.optional-dependencies]
 # For running benchmarks and developing new functionalities:
