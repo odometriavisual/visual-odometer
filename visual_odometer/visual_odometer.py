@@ -9,40 +9,6 @@ from .displacement_estimators import phase_amplified_correlation_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
 
-DEFAULT_CONFIG = {
-    "Displacement Estimation": {
-        "method": "svd",
-        "reprocess_displacement": False,
-        "skip_frames": False,
-        "params": {
-            "skip_frames_threshold": 5,
-            "reprocess_displacement_count": 1
-        },
-
-    },
-    "Frequency Window": {
-        "method": "Stone_et_al_2001",
-        "params": {
-            "factor": 0.6,
-        }
-    },
-    "Spatial Window": {
-        "method": "raised_cosine",
-        "params": {
-            "a0": 0.358,
-            "a1": 0.47,
-            "a2": 0.135,
-            "a3": 0.037,
-        }
-    },
-    "Downsampling": {
-        "method": "",
-        "params": {
-            "factor": 1,
-        }
-    },
-}
-
 
 class VisualOdometer:
     """
@@ -58,18 +24,65 @@ class VisualOdometer:
     In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
     """
 
-    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0):
+    def __init__(self, img_shape: (int, int), **kwargs):
         """
         Instantiates a visual odometer
         :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
         :param xres: Ratio of mm/pixels in the x dimension
         :param yres: Ratio of mm/pixels in the y dimension
+        :param displacement_estimation_method: Valid methods: "svd", "phase-correlation", "projection-svd", "phase-amplified-correlation"
+        Which displacement estimation method to be applied.
+        :param reprocess_displacement: Set to True to enable double processing, double processing increases accuracy at the cost of processing time.
+        :param frequency_window_method: {“Stone_et_al_2001”, “ideal-lowpass”, None}
+        Which frequency window to be applied.
+        :param frequency_window_params:
+        Parameters related to the chosen window.
+        :param spatial_window_method: {"blackman-harris", "raised-cosine", None}
+        Which spatial window to be applied.
+        :param spatial_window_params:
+        Parameters related to the chosen window.
+        :param downsampling_method: {“NN”, “bilinear”, "bicubic", None}
+        Which downsample algorithm to be applied.
+        :param downsampling_params:
+        Parameters related to the specific downsample algorithm.
         """
         # Default configs:
-        self.configs = DEFAULT_CONFIG
+        self.configs = {
+            "Displacement Estimation": {
+                "method": kwargs.get("displacement_estimation_method", "svd"),
+                "reprocess_displacement": kwargs.get("reprocess_displacement", False),
+                "skip_frames": kwargs.get("skip_frames", False),
+                "params": {
+                    "skip_frames_threshold": 5,
+                    "reprocess_displacement_count": 1
+                },
+
+            },
+            "Frequency Window": {
+                "method": kwargs.get("frequency_window_method", "Stone_et_al_2001"),
+                "params": kwargs.get("frequency_window_params", {
+                    "factor": 0.6,
+                })
+            },
+            "Spatial Window": {
+                "method": kwargs.get("spatial_window_method", "raised_cosine"),
+                "params": kwargs.get("spatial_window_params", {
+                    "a0": 0.358,
+                    "a1": 0.47,
+                    "a2": 0.135,
+                    "a3": 0.037,
+                })
+            },
+            "Downsampling": {
+                "method": kwargs.get("downsampling_method", ""),
+                "params": kwargs.get("downsampling_params", {
+                    "factor": 1,
+                })
+            },
+        }
 
         self.img_size = img_shape
-        self.xres, self.yres = xres, yres  # Relationship between displacement in pixels and millimeters
+        self.xres, self.yres = kwargs.get("xres", 1.), kwargs.get("yres", 1.)  # Relationship between displacement in pixels and millimeters
 
         self.current_position = np.array([0, 0])  # In pixels
         self.number_of_displacements = 0
@@ -109,7 +122,6 @@ class VisualOdometer:
 
     def _estimate_displacement(self, fft_beg, fft_end, img_size_x=None, img_size_y=None) -> (float, float):
         method = self.configs["Displacement Estimation"]["method"]
-        params = self.configs["Displacement Estimation"]["params"]
 
         if img_size_x is None:
             img_size_x = self.img_size[1]
@@ -217,9 +229,6 @@ class VisualOdometer:
 
     def config_downsampling(self, method: str = "", **kwargs):
         self._config("Downsampling", method, kwargs)
-
-    def set_config(self, new_config):
-        self.configs = new_config
 
     def print_config(self):
         print(self.configs)
