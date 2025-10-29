@@ -89,14 +89,6 @@ class VisualOdometer:
         # The first img in imgs_processed will always be the last successful image used on a displacement estimation.
         # The second img will be the most recent image
 
-    def calibrate(self, new_xres: float, new_yres: float):
-        """
-        Changes the visual odometer's ratio of mm/pixels
-        :param new_xres: New ratio in the x dimension
-        :param new_yres: New ration in the y dimension
-        """
-        self.xres, self.yres = new_xres, new_yres
-
     def estimate_displacement_between(self, img_beg, img_end) -> (float, float):
         """
         Estimates the displacement between two images
@@ -209,29 +201,3 @@ class VisualOdometer:
                 self.imgs_processed[1] = new_img
                 self.imgs_original[1] = img
 
-    def _config(self, arg1: str, arg2: str, arg3: dict):
-        self.configs[arg1]["method"] = arg2
-        self.configs[arg1]["params"] = arg3
-
-    def config_displacement_estimation(self, method: str = "", **kwargs):
-        self._config("Displacement Estimation", method, kwargs)
-
-    def config_frequency_window(self, method: str = "", **kwargs):
-        self._config("Frequency Window", method, kwargs)
-
-    def config_spatial_window(self, method: str = "", **kwargs):
-        self._config("Spatial Window", method, kwargs)
-
-    def config_downsampling(self, method: str = "", **kwargs):
-        self._config("Downsampling", method, kwargs)
-
-    def print_config(self):
-        print(self.configs)
-
-    def save_config(self, path: str, filename="visual-odometer-config"):
-        try:
-            with open(path + "/" + filename + ".json", 'w') as fp:
-                json.dump(self.configs, fp)
-            return True
-        except:
-            return False
