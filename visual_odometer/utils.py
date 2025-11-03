@@ -2,7 +2,7 @@ import json
 
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
-        "method": "svd",
+        "method": "projection-svd",
         "reprocess_displacement": False,
         "skip_frames": False,
         "params": {

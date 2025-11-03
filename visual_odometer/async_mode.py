@@ -1,7 +1,7 @@
 import threading
 from multiprocessing import Pipe, Process
 import numpy as np
-from .displacement_estimators import svd_method, phase_correlation_method
+from .displacement_estimators import svd_method, phase_correlation_method, proj_svd_method
 from .preprocessing import image_preprocessing
 from .dsp import crop_two_imgs_with_displacement
 
@@ -41,13 +41,14 @@ def worker_svd(conn_in, conn_out, configs, xres, yres):
             img_size_x = img.shape[1]
             img_size_y = img.shape[0]
 
-            # 1. Deslocamento Bruto
             if method == "svd":
                 dx, dy = svd_method(prev_spectrum, spectrum, img_size_x, img_size_y)
             elif method == "phase-correlation":
                 dx, dy = phase_correlation_method(prev_spectrum, spectrum)
+            elif method == "projection-svd":
+                dx, dy = proj_svd_method(prev_spectrum, spectrum, img_size_x, img_size_y, dx_max=30, dy_max=30,
+                                                   phase_windowing="central") #Implementando temporariamente pra testar
             else:
-                # O VO Core deve garantir que isso não ocorra, mas é bom ter a exceção
                 raise NotImplementedError(f"Método {method} não implementado no worker SVD.")
 
             # 2. Reprocessamento opcional
