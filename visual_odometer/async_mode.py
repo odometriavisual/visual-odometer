@@ -45,8 +45,8 @@ def worker_svd(conn_in, conn_out, configs, xres, yres):
                 dx, dy = svd_method(prev_spectrum, spectrum, img_size_x, img_size_y)
             elif method == "phase-correlation":
                 dx, dy = phase_correlation_method(prev_spectrum, spectrum)
-            elif method == "projection-svd":
-                dx, dy = proj_svd_method(prev_spectrum, spectrum, img_size_x, img_size_y, dx_max=30, dy_max=30,
+            elif method == "proj ection-svd":
+                dx, dy = proj_svd_method(prev_spectrum, spectrum, img_size_x, img_size_y, dx_max=60, dy_max=60,
                                                    phase_windowing="central") #Implementando temporariamente pra testar
             else:
                 raise NotImplementedError(f"Método {method} não implementado no worker SVD.")

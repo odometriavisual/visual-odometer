@@ -68,7 +68,7 @@ class VisualOdometer:
             case "phase-correlation":
                 _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
             case "projection-svd":
-                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30,
+                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=60, dy_max=60,
                                                    phase_windowing="central")
             case "phase-amplified-correlation":
                 _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
