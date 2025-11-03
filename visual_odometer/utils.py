@@ -1,0 +1,53 @@
+import json
+
+DEFAULT_CONFIG = {
+    "Displacement Estimation": {
+        "method": "svd",
+        "reprocess_displacement": False,
+        "skip_frames": False,
+        "params": {
+            "skip_frames_threshold": 5,
+            "reprocess_displacement_count": 1
+        },
+    },
+    "Frequency Window": {
+        "method": "Stone_et_al_2001",
+        "params": {
+            "factor": 0.6,
+        }
+    },
+    "Spatial Window": {
+        "method": "raised_cosine",
+        "params": {
+            "a0": 0.358,
+            "a1": 0.47,
+            "a2": 0.135,
+            "a3": 0.037,
+        }
+    },
+    "Downsampling": {
+        "method": "",
+        "params": {
+            "factor": 1,
+        }
+    },
+}
+
+def merge_dicts(base: dict, override: dict):
+    """Recursively merges two dictionaries."""
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            merge_dicts(base[k], v)
+        else:
+            base[k] = v
+    return base
+
+def save_config(configs: dict, path: str, filename="visual-odometer-config"):
+    """Saves the configuration to a JSON file."""
+    try:
+        with open(path + "/" + filename + ".json", 'w') as fp:
+            json.dump(configs, fp, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False

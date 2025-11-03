@@ -1,107 +1,61 @@
-import numpy as np
-import json
-import threading
+# visual_odometer/core.py
 
-from .displacement_estimators import svd_method
-from .displacement_estimators import phase_correlation_method
-from .displacement_estimators import proj_svd_method
-from .displacement_estimators import phase_amplified_correlation_method
+import numpy as np
+import threading
+import json
+
+from .utils import merge_dicts  # Importa de utils
+# Importa os estimadores (SVF, PC, etc.) para os métodos de shot único
+from .displacement_estimators import svd_method, phase_correlation_method, proj_svd_method, \
+    phase_amplified_correlation_method
 from .preprocessing import image_preprocessing
-from .dsp import crop_two_imgs_with_displacement
+
+# Classe que será usada para ligar os hooks (síncrono ou assíncrono)
+AsyncOdometerHooks = None
+SyncOdometerHooks = None
 
 
 class VisualOdometer:
     """
-    The class implementing the visual odometer.
-
-    The visual odometer is capable of woking in the "Single Shot" mode and in the "Sequential" mode
-    In the "Single Shot" mode, the visual odometer outputs the displacement between a pair of images.
-    In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
+    A classe implementando o visual odometer.
     """
 
-    def __init__(self, img_shape: (int, int), **kwargs):
-        """
-        Instantiates a visual odometer
+    def __init__(self, img_shape: (int, int), xres: float = 1.0, yres: float = 1.0, configs: dict = None,
+                 async_mode=False):
 
-        :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
-        :param xres: Ratio of mm/pixels in the x dimension
-        :param yres: Ratio of mm/pixels in the y dimension
-        :param displacement_estimation_method:  Which displacement estimation method to be applied. Available methods: "svd", "phase-correlation", "projection-svd", "phase-amplified-correlation".
-        :param reprocess_displacement: Set to True to enable double processing, double processing increases accuracy at the cost of processing time.
-        :param frequency_window_method: Which frequency window to be applied. Available methods: “Stone_et_al_2001”, “ideal-lowpass”, None
-        :param frequency_window_params: Parameters related to the chosen window.
-        :param spatial_window_method: Which spatial window to be applied. Available methods: "blackman-harris", "raised-cosine", None
-        :param spatial_window_params: Parameters related to the chosen window.
-        :param downsampling_method: Which downsample algorithm to be applied. Available methods: “NN”, “bilinear”, "bicubic", None
-        :param downsampling_params: Parameters related to the specific downsample algorithm.
-        """
-        # Default configs:
-        self.configs = {
-            "Displacement Estimation": {
-                "method": kwargs.get("displacement_estimation_method", "svd"),
-                "reprocess_displacement": kwargs.get("reprocess_displacement", False),
-                "skip_frames": kwargs.get("skip_frames", False),
-                "params": {
-                    "skip_frames_threshold": 5,
-                    "reprocess_displacement_count": 1
-                },
+        from .utils import DEFAULT_CONFIG
+        # Importa os hooks após carregar as classes de worker para evitar erro de importação circular
+        global AsyncOdometerHooks, SyncOdometerHooks
+        from .async_mode import AsyncOdometerHooks
+        from .sync_mode import SyncOdometerHooks
 
-            },
-            "Frequency Window": {
-                "method": kwargs.get("frequency_window_method", "Stone_et_al_2001"),
-                "params": kwargs.get("frequency_window_params", {
-                    "factor": 0.6,
-                })
-            },
-            "Spatial Window": {
-                "method": kwargs.get("spatial_window_method", "raised_cosine"),
-                "params": kwargs.get("spatial_window_params", {
-                    "a0": 0.358,
-                    "a1": 0.47,
-                    "a2": 0.135,
-                    "a3": 0.037,
-                })
-            },
-            "Downsampling": {
-                "method": kwargs.get("downsampling_method", ""),
-                "params": kwargs.get("downsampling_params", {
-                    "factor": 1,
-                })
-            },
-        }
+        self.configs = DEFAULT_CONFIG.copy()
+        if configs:
+            merge_dicts(self.configs, configs)
 
         self.img_size = img_shape
-        self.xres, self.yres = kwargs.get("xres", 1.), kwargs.get("yres", 1.)  # Relationship between displacement in pixels and millimeters
+        self.xres, self.yres = xres, yres
 
-        self.current_position = np.array([0, 0])  # In pixels
+        # Estado Sequencial (compartilhado, mas gerenciado pelos hooks)
+        self.current_position = np.array([0.0, 0.0])
         self.number_of_displacements = 0
 
         self.imgs_lock = threading.Lock()
         self.imgs_processed = [None, None]
         self.imgs_original = [None, None]
 
-        # The first img in imgs_processed will always be the last successful image used on a displacement estimation.
-        # The second img will be the most recent image
+        self.async_mode = async_mode
+        self.hooks = None
 
-    def estimate_displacement_between(self, img_beg, img_end) -> (float, float):
-        """
-        Estimates the displacement between two images
+        if async_mode:
+            self.hooks = AsyncOdometerHooks(self)
+        else:
+            self.hooks = SyncOdometerHooks(self)
 
-        Intended for the "Single Shot" mode, for estimating displacements between sequences of images use `estimate_last_displacement()`.
-
-        :param img_beg: Image at t = t_0
-        :param img_end: Image at t = t₀ + Δt
-        :return: x and y displacements in mm
-        """
-
-        img_x_size = img_beg.shape[1]
-        img_y_size = img_end.shape[0]
-
-        fft_beg = image_preprocessing(img_beg, self.configs)
-        fft_end = image_preprocessing(img_end, self.configs)
-        return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
+    # --- Métodos Independentes de Modo ---
 
     def _estimate_displacement(self, fft_beg, fft_end, img_size_x=None, img_size_y=None) -> (float, float):
+        """Cálculo interno de deslocamento, usado por estimate_displacement_between."""
         method = self.configs["Displacement Estimation"]["method"]
 
         if img_size_x is None:
@@ -110,88 +64,78 @@ class VisualOdometer:
 
         match method:
             case "svd":
-                _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")  # In pixels
+                _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")
             case "phase-correlation":
                 _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
             case "projection-svd":
-                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30, phase_windowing="central")
+                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30,
+                                                   phase_windowing="central")
             case "phase-amplified-correlation":
                 _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
             case _:
                 raise ValueError(f"Displacement estimation method {method} not valid.")
 
-        # Convert from pixels to millimeters (or equivalent):
+        # Converte de pixels para mm/unidade
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
-        self.current_position = np.array([self.current_position[0] + deltax, self.current_position[1] + deltay])
         return deltax, deltay
 
-    def get_displacement(self):
+    def estimate_displacement_between(self, img_beg, img_end) -> (float, float):
         """
-        Get the next displacement in "Sequential" mode.
-
-        :return: Next x and y displacements in mm
+        Modo "Single Shot": Estima o deslocamento entre duas imagens quaisquer.
         """
-        try:
-            reprocess_displacement = self.configs["Displacement Estimation"]["reprocess_displacement"]
-            skip_frames = self.configs["Displacement Estimation"]["skip_frames"]
+        img_x_size = img_beg.shape[1]
+        img_y_size = img_beg.shape[0]
 
-            if self.imgs_processed[0] is not None and self.imgs_processed[1] is not None:
-                spectrum_beg = self.imgs_processed[0]
-                original_img_beg = self.imgs_original[0]
+        fft_beg = image_preprocessing(img_beg, self.configs)
+        fft_end = image_preprocessing(img_end, self.configs)
 
-                with self.imgs_lock:
-                    spectrum_end = self.imgs_processed[1].copy()
-                    original_img_end = self.imgs_original[1].copy()
+        # Este método NÃO atualiza current_position
+        return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
 
-                # Estimar deslocamento bruto
-                displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
-                if reprocess_displacement:
-                    count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
-                    for _ in range(count):
-                        round_dx = int(round(displacement[0]))
-                        round_dy = int(round(displacement[1]))
-                        crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end,
-                                                                                     round_dx, round_dy)
-                        new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
-                        displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
+    def calibrate(self, new_xres: float, new_yres: float):
+        """Altera a resolução (mm/pixel)."""
+        self.xres, self.yres = new_xres, new_yres
 
-                if skip_frames:
-                    threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
-                    if np.linalg.norm(displacement) < threshold:
-                        # Não atualiza a imagem base (mantém img_beg)
-                        return 0.0, 0.0
+    # --- Métodos de Configuração ---
 
-                # Atualiza img base apenas se deslocamento foi aceito
-                self.imgs_processed[0] = spectrum_end
-                self.imgs_original[0] = original_img_end
+    def _config(self, section: str, method: str = "", **kwargs):
+        """Método auxiliar para configurar seções."""
+        if method:
+            self.configs[section]["method"] = method
+        if kwargs:
+            self.configs[section]["params"].update(kwargs)
 
-                self.current_position[0] += displacement[0]
-                self.current_position[1] += displacement[1]
-                self.number_of_displacements += 1
+    def config_displacement_estimation(self, method: str = "", **kwargs):
+        self._config("Displacement Estimation", method, **kwargs)
 
-                return displacement
-            else:
-                return 0.0, 0.0
-        except NotImplementedError:
-            return None, None
+    def config_frequency_window(self, method: str = "", **kwargs):
+        self._config("Frequency Window", method, **kwargs)
 
-    def feed_image(self, img) -> None:
-        """
-        Send the next image in "Sequential" mode for processing
-        :param img: Next image in the stream
-        """
+    def config_spatial_window(self, method: str = "", **kwargs):
+        self._config("Spatial Window", method, **kwargs)
 
-        # Update the latest image:
-        img_spectrum = image_preprocessing(img, self.configs)
+    def config_downsampling(self, method: str = "", **kwargs):
+        self._config("Downsampling", method, **kwargs)
 
-        if self.imgs_processed[0] is None:
-            # The first iteration
-            self.imgs_processed[0] = img_spectrum
-            self.imgs_original[0] = img
-        else:
-            # Update the current image:
-            new_img = img_spectrum
-            with self.imgs_lock:
-                self.imgs_processed[1] = new_img
-                self.imgs_original[1] = img
+    def set_config(self, new_config: dict):
+        """Sobrescreve todas as configurações."""
+        from .utils import merge_dicts
+        merge_dicts(self.configs, new_config)
 
+    def print_config(self):
+        print(json.dumps(self.configs, indent=2))
+
+    def save_config(self, path: str, filename="visual-odometer-config"):
+        from .utils import save_config
+        return save_config(self.configs, path, filename)
+
+    def shutdown(self):
+        """Encerra processos de forma limpa (se estiver no modo assíncrono)."""
+        if self.hooks:
+            # Chama o método shutdown específico do hook (async ou sync, mas o sync não faz nada)
+            if hasattr(self.hooks, 'shutdown'):
+                self.hooks.shutdown()
+
+    def __del__(self):
+        """Destructor para garantir o encerramento limpo."""
+        self.shutdown()
