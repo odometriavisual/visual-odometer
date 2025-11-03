@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from visual_odometer import VisualOdometer
 import time
 from glob import glob
