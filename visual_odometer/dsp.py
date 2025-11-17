@@ -6,6 +6,7 @@ General Digital Signal Processing (DSP) utilities.
 
 from numpy.typing import NDArray
 import numpy as np
+from scipy.sparse.linalg import svds as svds_cpu
 
 
 # Frequency Windows:
@@ -233,3 +234,72 @@ def normalized_cps(F: NDArray[np.complex64], G: NDArray[np.complex64], epsilon: 
     return Q
 
 #
+def compute_dominant_singular_vectors(
+        Q,
+        method = "power_iteration",
+        max_iter: int = 3,
+        tol: float = 1e-8
+) -> tuple[NDArray[np.complex64], float, NDArray[np.complex64]]:
+    """
+    Compute the dominant left and right singular vectors of a matrix Q.
+
+    Parameters
+    ----------
+    Q : NDArray[np.complex64]
+        Input matrix (typically the cross-power spectrum)
+    method : {"svds", "power_iteration"}
+        Method to compute singular vectors
+    max_iter : int
+        Maximum iterations for power iteration method
+    tol : float
+        Convergence tolerance for power iteration
+
+    Returns
+    -------
+    tuple[NDArray[np.complex64], float, NDArray[np.complex64]]
+        (u, s, v) where:
+        - u: left singular vector (column vector, shape (M, 1))
+        - s: dominant singular value (scalar)
+        - v: right singular vector (row vector, shape (1, N))
+    """
+    if method == "svds":
+        # Usa scipy.sparse.linalg.svds
+        qu, s, qv = svds_cpu(Q, k=1)
+        # svds retorna qu: (M, 1), s: (1,), qv: (1, N)
+        return qu, s[0], qv
+
+    elif method == "power_iteration":
+        # Implementa power iteration
+        M, N = Q.shape
+
+        # Inicializa vetor aleatório
+        v = np.random.randn(N).astype(np.complex64)
+        v /= np.linalg.norm(v)
+
+        # Iterações do power method
+        for i in range(max_iter):
+            # v_new = (Q^H @ Q) @ v
+            v_new = Q.conj().T @ (Q @ v)
+            v_new /= np.linalg.norm(v_new)
+
+            # Verifica convergência
+            if np.linalg.norm(v_new - v) < tol:
+                break
+            v = v_new
+
+        # Calcula u = Q @ v e normaliza
+        u = Q @ v
+        s = np.linalg.norm(u)  # valor singular dominante
+        u /= s
+
+        # Ajuste de convenção: svds retorna v conjugado em relação ao power iteration
+        v = np.conj(v)
+
+        # Formata para match do formato do svds
+        u = u.reshape(-1, 1)  # (M, 1)
+        v = v.reshape(1, -1)  # (1, N)
+
+        return u, s, v
+
+    else:
+        raise ValueError(f"Unknown method: {method}")

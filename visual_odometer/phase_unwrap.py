@@ -1,7 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
 
-
 def phase_unwrap(phase_wrapped: NDArray[np.float32], method = "itoh1982") -> NDArray[np.float32]:
     r"""
     Interface for applying different types of phase unwrapping algorithms.
@@ -14,7 +13,7 @@ def phase_unwrap(phase_wrapped: NDArray[np.float32], method = "itoh1982") -> NDA
         Phase unwrapping method, by default "itoh1982".
 
     Returns
-    -------dsadas
+    -------
     NDArray[np.float32]
         A 1-D Array representing unwrapped phase values that could range from :math::math:`]-\infty, +\infty]`.
 

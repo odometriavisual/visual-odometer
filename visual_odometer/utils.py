@@ -1,9 +1,7 @@
-import json
-
 DEFAULT_CONFIG = {
     "Displacement Estimation": {
         "method": "projection-svd",
-        "reprocess_displacement": False,
+        "reprocess_displacement": True,
         "skip_frames": False,
         "params": {
             "skip_frames_threshold": 5,
