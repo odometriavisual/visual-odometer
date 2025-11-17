@@ -42,12 +42,3 @@ def merge_dicts(base: dict, override: dict):
             base[k] = v
     return base
 
-def save_config(configs: dict, path: str, filename="visual-odometer-config"):
-    """Saves the configuration to a JSON file."""
-    try:
-        with open(path + "/" + filename + ".json", 'w') as fp:
-            json.dump(configs, fp, indent=2)
-        return True
-    except Exception as e:
-        print(f"Error saving config: {e}")
-        return False
