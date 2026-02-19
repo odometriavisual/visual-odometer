@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = [ "visual_odometer" ]
+exclude = [ "datasets" ]
 
 [project.optional-dependencies]
 # For running benchmarks and developing new functionalities:
