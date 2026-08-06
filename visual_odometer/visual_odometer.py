@@ -6,6 +6,7 @@ from visual_odometer.displacement_estimators import phase_correlation_method
 from visual_odometer.displacement_estimators import proj_svd_method
 from visual_odometer.displacement_estimators import phase_amplified_correlation_method
 from visual_odometer.displacement_estimators import pc_analyze_image
+from visual_odometer.displacement_estimators import orb_analyze_image, orb_method
 from visual_odometer.dsp import crop_two_imgs_with_displacement
 
 
@@ -97,6 +98,10 @@ class VisualOdometer:
             case "phase-amplified-correlation":
                 self.analyze_method = pc_analyze_image
                 self.compute_displacement_method = lambda fft_beg, fft_end: phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
+
+            case "orb":
+                self.analyze_method = orb_analyze_image
+                self.compute_displacement_method = orb_method
 
             case _:
                 raise ValueError(f"Displacement estimation method {method} not valid.")

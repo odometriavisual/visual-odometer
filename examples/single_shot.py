@@ -15,7 +15,7 @@ def load_img(filename):
 img0 = np.asarray(load_img('../datasets/dario_320x240/img.png')) # image at t = t₀
 img1 = np.asarray(load_img('../datasets/dario_320x240/img_translated.png')) # image at t = t₀ + Δt
 
-odometer = VisualOdometer(img_shape=img0.shape)
+odometer = VisualOdometer(img_shape=img0.shape, displacement_estimation_method="orb")
 
 t0 = time.time()
 dx, dy = odometer.estimate_displacement_between(img0, img1)
