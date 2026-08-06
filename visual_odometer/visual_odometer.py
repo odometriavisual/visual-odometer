@@ -79,6 +79,28 @@ class VisualOdometer:
         self.imgs_processed = [None, None]
         self.imgs_original = [None, None]
 
+        method = self.configs["Displacement Estimation"]["method"]
+
+        match method:
+            case "svd":
+                self.analyze_method = pc_analyze_image
+                self.compute_displacement_method = lambda fft_beg, fft_end: svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], phase_windowing="central")
+
+            case "phase-correlation":
+                self.analyze_method = pc_analyze_image
+                self.compute_displacement_method = phase_correlation_method
+
+            case "projection-svd":
+                self.analyze_method = pc_analyze_image
+                self.compute_displacement_method = lambda fft_beg, fft_end: proj_svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], dx_max=30, dy_max=30, phase_windowing="central")
+
+            case "phase-amplified-correlation":
+                self.analyze_method = pc_analyze_image
+                self.compute_displacement_method = lambda fft_beg, fft_end: phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
+
+            case _:
+                raise ValueError(f"Displacement estimation method {method} not valid.")
+
         # The first img in imgs_processed will always be the last successful image used on a displacement estimation.
         # The second img will be the most recent image
 
@@ -92,32 +114,12 @@ class VisualOdometer:
         :param img_end: Image at t = t₀ + Δt
         :return: x and y displacements in mm
         """
+        fft_beg = self.analyze_method(img_beg, self.configs)
+        fft_end = self.analyze_method(img_end, self.configs)
+        return self._estimate_displacement(fft_beg, fft_end)
 
-        img_x_size = img_beg.shape[1]
-        img_y_size = img_end.shape[0]
-
-        fft_beg = pc_analyze_image(img_beg, self.configs)
-        fft_end = pc_analyze_image(img_end, self.configs)
-        return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
-
-    def _estimate_displacement(self, fft_beg, fft_end, img_size_x=None, img_size_y=None) -> (float, float):
-        method = self.configs["Displacement Estimation"]["method"]
-
-        if img_size_x is None:
-            img_size_x = self.img_size[1]
-            img_size_y = self.img_size[0]
-
-        match method:
-            case "svd":
-                _deltax, _deltay = svd_method(fft_beg, fft_end, img_size_x, img_size_y, phase_windowing="central")  # In pixels
-            case "phase-correlation":
-                _deltax, _deltay = phase_correlation_method(fft_beg, fft_end)
-            case "projection-svd":
-                _deltax, _deltay = proj_svd_method(fft_beg, fft_end, img_size_x, img_size_y, dx_max=30, dy_max=30, phase_windowing="central")
-            case "phase-amplified-correlation":
-                _deltax, _deltay = phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
-            case _:
-                raise ValueError(f"Displacement estimation method {method} not valid.")
+    def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
+        _deltax, _deltay = self.compute_displacement_method(fft_beg, fft_end)
 
         # Convert from pixels to millimeters (or equivalent):
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
@@ -181,7 +183,7 @@ class VisualOdometer:
         """
 
         # Update the latest image:
-        img_spectrum = pc_analyze_image(img, self.configs)
+        img_spectrum = self.analyze_method(img, self.configs)
 
         if self.imgs_processed[0] is None:
             # The first iteration

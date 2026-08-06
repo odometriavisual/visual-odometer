@@ -25,7 +25,7 @@ img1 = np.asarray(grayscale_img1)
 stream_size = 100
 img_stream = [img0, img1] * stream_size
 
-odometer = VisualOdometer(img_shape=img0.shape)
+odometer = VisualOdometer(img_shape=img0.shape, displacement_estimation_method="svd")
 odometer.feed_image(img0)
 odometer.get_displacement()
 odometer.feed_image(img1)
