@@ -2,8 +2,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scipy.sparse.linalg import svds as svds_cpu
-from ..phase_unwrap import phase_unwrap
-from ..dsp import normalized_cps
+from visual_odometer.dsp import normalized_cps
+
+from .common import phase_unwrap
 
 
 def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[float, float]:

@@ -1,13 +1,12 @@
 import numpy as np
-import json
 import threading
 
-from .displacement_estimators import svd_method
-from .displacement_estimators import phase_correlation_method
-from .displacement_estimators import proj_svd_method
-from .displacement_estimators import phase_amplified_correlation_method
-from .preprocessing import image_preprocessing
-from .dsp import crop_two_imgs_with_displacement
+from visual_odometer.displacement_estimators import svd_method
+from visual_odometer.displacement_estimators import phase_correlation_method
+from visual_odometer.displacement_estimators import proj_svd_method
+from visual_odometer.displacement_estimators import phase_amplified_correlation_method
+from visual_odometer.displacement_estimators import pc_analyze_image
+from visual_odometer.dsp import crop_two_imgs_with_displacement
 
 
 class VisualOdometer:
@@ -97,8 +96,8 @@ class VisualOdometer:
         img_x_size = img_beg.shape[1]
         img_y_size = img_end.shape[0]
 
-        fft_beg = image_preprocessing(img_beg, self.configs)
-        fft_end = image_preprocessing(img_end, self.configs)
+        fft_beg = pc_analyze_image(img_beg, self.configs)
+        fft_end = pc_analyze_image(img_end, self.configs)
         return self._estimate_displacement(fft_beg, fft_end, img_x_size, img_y_size)
 
     def _estimate_displacement(self, fft_beg, fft_end, img_size_x=None, img_size_y=None) -> (float, float):
@@ -182,7 +181,7 @@ class VisualOdometer:
         """
 
         # Update the latest image:
-        img_spectrum = image_preprocessing(img, self.configs)
+        img_spectrum = pc_analyze_image(img, self.configs)
 
         if self.imgs_processed[0] is None:
             # The first iteration

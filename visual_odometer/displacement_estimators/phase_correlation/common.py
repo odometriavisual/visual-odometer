@@ -5,8 +5,10 @@ Important pre-processing steps such as windowing and downsampling.
 """
 
 from PIL import Image
-from .dsp import *
+import numpy as np
+from numpy.typing import NDArray
 
+from visual_odometer import dsp
 
 def apply_spatial_window(img: NDArray, method, params: dict) -> NDArray:
     """
@@ -29,22 +31,26 @@ def apply_spatial_window(img: NDArray, method, params: dict) -> NDArray:
     Raises
     ------
     ValueError
-        If the ``method`` is not among the implemented spatial or temporal windowing methods.  
+        If the ``method`` is not among the implemented spatial or temporal windowing methods.
     """
 
     match method:
         case "blackman-harris":
-            a0, a1, a2, a3 = params['a0'], params['a1'], params['a2'], params['a3']
-            return apply_blackman_harris_window(img, a0, a1, a2, a3).astype(np.float32)
+            a0, a1, a2, a3 = params["a0"], params["a1"], params["a2"], params["a3"]
+            return dsp.apply_blackman_harris_window(img, a0, a1, a2, a3).astype(
+                np.float32
+            )
         case "raised-cosine" | "raised_cosine":
-            return apply_raised_cosine_window(img).astype(np.float32)
+            return dsp.apply_raised_cosine_window(img).astype(np.float32)
         case "" | None:
             return img
         case _:
-            raise ValueError(f'Invalid spatial window method: {method}')
+            raise ValueError(f"Invalid spatial window method: {method}")
 
 
-def apply_downsampling(img: NDArray[np.float32], method, params: dict) -> NDArray[np.float32]:
+def apply_downsampling(
+    img: NDArray[np.float32], method, params: dict
+) -> NDArray[np.float32]:
     """
     Interface that can apply different types of downsampling algorithms.
 
@@ -84,7 +90,9 @@ def apply_downsampling(img: NDArray[np.float32], method, params: dict) -> NDArra
             raise ValueError(f"Invalid downsampling method: {method}")
 
 
-def apply_frequency_window(spectrum: NDArray[np.complex64], method, params: dict) -> NDArray[np.complex64]:
+def apply_frequency_window(
+    spectrum: NDArray[np.complex64], method, params: dict
+) -> NDArray[np.complex64]:
     """
     Interface that can apply different types of frequency windows.
 
@@ -111,14 +119,78 @@ def apply_frequency_window(spectrum: NDArray[np.complex64], method, params: dict
 
     match method:
         case "Stone_et_al_2001" | "ideal-lowpass":
-            return ideal_lowpass(spectrum, params["factor"])
+            return dsp.ideal_lowpass(spectrum, params["factor"])
         case "" | None:
             return spectrum
         case _:
-            raise ValueError(f'Invalid frequency window method: {method}')
+            raise ValueError(f"Invalid frequency window method: {method}")
 
 
-def image_preprocessing(img: NDArray[np.float32], configs: dict) -> NDArray[np.complex64]:
+def phase_unwrap(
+    phase_wrapped: NDArray[np.float32], method="itoh1982"
+) -> NDArray[np.float32]:
+    r"""
+    Interface for applying different types of phase unwrapping algorithms.
+
+    Parameters
+    ----------
+    phase_wrapped : NDArray[np.float32]
+         A 1-D Array representing the wrapped phase values that is limited to the :math:`]-\pi, +\pi]` interval.
+    method : {"itoh1982", "numpy"}, optional
+        Phase unwrapping method, by default "itoh1982".
+
+    Returns
+    -------dsadas
+    NDArray[np.float32]
+        A 1-D Array representing unwrapped phase values that could range from :math::math:`]-\infty, +\infty]`.
+
+    Raises
+    ------
+    ValueError
+        If the ``method`` is not among the implemented phase unwrapping methods.
+    """
+
+    match method:
+        case "itoh1982":
+            return itoh1982_method(phase_wrapped)
+        case "numpy":
+            return np.unwrap(phase_wrapped)
+        case _:
+            raise ValueError(f"Phase unwrap method {method} not valid.")
+
+
+def itoh1982_method(
+    phase_vec: NDArray[np.float32], factor: float = 0.7
+) -> NDArray[np.float32]:
+    r"""
+    Phase unwrapping method based on :cite:`itoh_analysis_1982`.
+
+    Parameters
+    ----------
+    phase_vec : NDArray[np.float32]
+         A 1-D Array representing the wrapped phase values that is limited to the :math:`]-\pi, +\pi]` interval.
+    factor : float, optional
+        A constant that defines how close the first-order difference between two consecutive phase samples must be to :math:`2\pi` to be considered a wrapping event, by default 0.7
+
+    Returns
+    -------
+    NDArray[np.float32]
+        A 1-D Array representing unwrapped phase values that could range from :math::math:`]-\infty, +\infty]`.
+
+    References
+    ----------
+    :cite:`itoh_analysis_1982` Itoh, K. (1982). Analysis of the phase unwrapping algorithm. Applied optics, 21(14), 2470-2470. :doi:`10.1364/AO.21.002470`
+    """
+    phase_diff = np.diff(phase_vec)
+    corrected_difference = (
+        phase_diff
+        - 2.0 * np.pi * (phase_diff > (2 * np.pi * factor))
+        + 2.0 * np.pi * (phase_diff < -(2 * np.pi * factor))
+    )
+    return np.cumsum(corrected_difference)
+
+
+def pc_analyze_image(img: NDArray[np.float32], configs: dict) -> NDArray[np.complex64]:
     """
     Function that applies a pipeline of image-processing steps.
 
@@ -140,20 +212,20 @@ def image_preprocessing(img: NDArray[np.float32], configs: dict) -> NDArray[np.c
     img = apply_downsampling(
         img,
         method=configs["Downsampling"]["method"],
-        params=configs["Downsampling"]["params"]
+        params=configs["Downsampling"]["params"],
     )
 
     # Apply spatial windowing:
     img = apply_spatial_window(
         img,
         method=configs["Spatial Window"]["method"],
-        params=configs["Spatial Window"]["params"]
+        params=configs["Spatial Window"]["params"],
     )
 
     img_spectrum = np.fft.fftshift(np.fft.fft2(img))
     img_spectrum = apply_frequency_window(
         img_spectrum,
         method=configs["Frequency Window"]["method"],
-        params=configs["Frequency Window"]["params"]
+        params=configs["Frequency Window"]["params"],
     )
     return img_spectrum
