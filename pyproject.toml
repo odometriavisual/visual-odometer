@@ -9,7 +9,8 @@ readme = "README.md"
 dependencies = [
     "numpy",
     "scipy",
-    "pillow"
+    "pillow",
+    "opencv-python",
 ]
 
 [tool.setuptools.packages.find]
