@@ -20,9 +20,7 @@ def orb_method(beg, end):
 
         ret, inliers = cv2.estimateTranslation2D(kp0, kp1, method=cv2.RANSAC)
 
-        if ret[0] and np.count_nonzero(inliers) > len(inliers)*0.5:
-            return ret
-        else:
-            return 0, 0
+        return ret[0], ret[1], np.count_nonzero(inliers)/len(inliers)
+
     else:
-        return np.array((0, 0))
+        return [0, 0, 1]

@@ -30,7 +30,9 @@ def linear_regression(x: NDArray[np.float32], y: NDArray[np.float32]) -> tuple[f
     R[:, 0] = x
     x_sol = np.linalg.lstsq(R, y, rcond=None)
     mu, c = x_sol[0]
-    return mu, c
+    residuals = np.sum(x_sol[1])
+
+    return mu, c, residuals
 
 
 def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing = None) -> float:
@@ -74,8 +76,8 @@ def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing =
             raise ValueError(f"Invalid windowing method: {phase_windowing}")
 
 
-    mu, _ = linear_regression(x, y)
-    return mu * N / (2 * np.pi)
+    mu, c, residuals = linear_regression(x, y)
+    return mu * N / (2 * np.pi), residuals
 
 
 def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_method = 'itoh1982') -> tuple[float, float]:
@@ -121,7 +123,9 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_
     ang_qv = phase_unwrap(np.angle(qv[0, :]), unwrap_method)
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltax = svd_estimate_shift(ang_qv, M, phase_windowing)
-    deltay = svd_estimate_shift(ang_qu, N, phase_windowing)
+    deltax, residualsx = svd_estimate_shift(ang_qv, M, phase_windowing)
+    deltay, residualsy = svd_estimate_shift(ang_qu, N, phase_windowing)
 
-    return deltax, deltay
+    quality = np.max(np.abs([residualsx, residualsy]))
+
+    return deltax, deltay, quality

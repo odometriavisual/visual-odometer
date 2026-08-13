@@ -62,4 +62,4 @@ def phase_amplified_correlation_method(fft_beg: NDArray[np.complex64], fft_end: 
     # Correct the gain:
     dx, dy = dx_ / (1 + gain), dy_ / (1 + gain)
 
-    return dx, dy
+    return dx, dy, 1

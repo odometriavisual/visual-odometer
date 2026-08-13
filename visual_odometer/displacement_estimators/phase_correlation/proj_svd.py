@@ -123,7 +123,9 @@ def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex6
     N_ = N * Q_filtered.shape[1] / Q.shape[1]
 
     # Deslocamento no eixo x é equivalente a deslocamento ao longo do eixo das colunas e eixo y das linhas:
-    deltax = svd_estimate_shift(ang_qv, int(M_), phase_windowing)
-    deltay = svd_estimate_shift(ang_qu, int(N_), phase_windowing)
+    deltax, residualsx = svd_estimate_shift(ang_qv, int(M_), phase_windowing)
+    deltay, residualsy = svd_estimate_shift(ang_qu, int(N_), phase_windowing)
 
-    return deltax, deltay
+    quality = np.max(np.abs([residualsx, residualsy]))
+
+    return deltax, deltay, quality

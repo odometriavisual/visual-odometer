@@ -124,12 +124,12 @@ class VisualOdometer:
         return self._estimate_displacement(fft_beg, fft_end)
 
     def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
-        _deltax, _deltay = self.compute_displacement_method(fft_beg, fft_end)
+        _deltax, _deltay, q = self.compute_displacement_method(fft_beg, fft_end)
 
         # Convert from pixels to millimeters (or equivalent):
         deltax, deltay = _deltax * self.xres, _deltay * self.yres
         self.current_position = np.array([self.current_position[0] + deltax, self.current_position[1] + deltay])
-        return deltax, deltay
+        return deltax, deltay, q
 
     def get_displacement(self):
         """
@@ -159,7 +159,7 @@ class VisualOdometer:
                         crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end,
                                                                                      round_dx, round_dy)
                         new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
-                        displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1]]
+                        displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1], new_displacement[2]]
 
                 if skip_frames:
                     threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
@@ -177,9 +177,9 @@ class VisualOdometer:
 
                 return displacement
             else:
-                return 0.0, 0.0
+                return 0.0, 0.0, 1.0
         except NotImplementedError:
-            return None, None
+            return None, None, 1.0
 
     def feed_image(self, img) -> None:
         """

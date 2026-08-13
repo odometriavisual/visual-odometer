@@ -93,4 +93,4 @@ def phase_correlation_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np
     # Deslocamento
     dx, dy = subpixel_peak_position(np.abs(corr), method)
 
-    return dx, dy
+    return dx, dy, 1
