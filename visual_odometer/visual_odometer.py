@@ -1,33 +1,50 @@
-import numpy as np
 import threading
 
-from visual_odometer.displacement_estimators import svd_method
-from visual_odometer.displacement_estimators import phase_correlation_method
-from visual_odometer.displacement_estimators import proj_svd_method
-from visual_odometer.displacement_estimators import phase_amplified_correlation_method
-from visual_odometer.displacement_estimators import pc_analyze_image
-from visual_odometer.displacement_estimators import orb_analyze_image, orb_method
+import numpy as np
+
+from visual_odometer.displacement_estimators import (
+    orb_analyze_image,
+    orb_method,
+    pc_analyze_image,
+    phase_amplified_correlation_method,
+    phase_correlation_method,
+    proj_svd_method,
+    svd_method,
+)
 from visual_odometer.dsp import crop_two_imgs_with_displacement
 
 
 class VisualOdometer:
     """
     The class implementing the visual odometer.
+    Displacements are given in the camera coordinate system. That is, the top-left corner is (0, 0), positive X points towards the right of the image and positive Y points towards the bottom of the image.
 
     The visual odometer is capable of woking in the "Single Shot" mode and in the "Sequential" mode
     In the "Single Shot" mode, the visual odometer outputs the displacement between a pair of images.
     In the "Sequential" mode, the visual odometer outputs a stream of N-1 displacements from a sequence of N images.
     """
 
-    def __init__(self, img_shape: (int, int), **kwargs):
+    def __init__(
+        self,
+        img_shape: (int, int),
+        *,
+        displacement_estimation_method="svd",
+        reprocess_displacement=False,
+        skip_frames=False,
+        frequency_window_method="Stone_et_al_2001",
+        frequency_window_params=None,
+        spatial_window_method="raised_cosine",
+        spatial_window_params=None,
+        downsampling_method="",
+        downsampling_params=None
+    ):
         """
         Instantiates a visual odometer
 
         :param img_shape: The shape of the image array as defined by the numpy.ndarray.shape
-        :param xres: Ratio of mm/pixels in the x dimension
-        :param yres: Ratio of mm/pixels in the y dimension
         :param displacement_estimation_method:  Which displacement estimation method to be applied. Available methods: "svd", "phase-correlation", "projection-svd", "phase-amplified-correlation".
         :param reprocess_displacement: Set to True to enable double processing, double processing increases accuracy at the cost of processing time.
+        :param skip_frames: Set to True to enable skipping of frames, skip frames if displacement is too small.
         :param frequency_window_method: Which frequency window to be applied. Available methods: “Stone_et_al_2001”, “ideal-lowpass”, None
         :param frequency_window_params: Parameters related to the chosen window.
         :param spatial_window_method: Which spatial window to be applied. Available methods: "blackman-harris", "raised-cosine", None
@@ -35,43 +52,37 @@ class VisualOdometer:
         :param downsampling_method: Which downsample algorithm to be applied. Available methods: “NN”, “bilinear”, "bicubic", None
         :param downsampling_params: Parameters related to the specific downsample algorithm.
         """
+
+        frequency_window_params = frequency_window_params or {"factor": 0.6}
+        spatial_window_params = spatial_window_params or { "a0": 0.358, "a1": 0.47, "a2": 0.135, "a3": 0.037 }
+        downsampling_params = downsampling_params or {"factor": 1}
+
         # Default configs:
         self.configs = {
             "Displacement Estimation": {
-                "method": kwargs.get("displacement_estimation_method", "svd"),
-                "reprocess_displacement": kwargs.get("reprocess_displacement", False),
-                "skip_frames": kwargs.get("skip_frames", False),
+                "method": displacement_estimation_method,
+                "reprocess_displacement": reprocess_displacement,
+                "skip_frames": skip_frames,
                 "params": {
                     "skip_frames_threshold": 5,
-                    "reprocess_displacement_count": 1
+                    "reprocess_displacement_count": 1,
                 },
-
             },
             "Frequency Window": {
-                "method": kwargs.get("frequency_window_method", "Stone_et_al_2001"),
-                "params": kwargs.get("frequency_window_params", {
-                    "factor": 0.6,
-                })
+                "method": frequency_window_method,
+                "params": frequency_window_params,
             },
             "Spatial Window": {
-                "method": kwargs.get("spatial_window_method", "raised_cosine"),
-                "params": kwargs.get("spatial_window_params", {
-                    "a0": 0.358,
-                    "a1": 0.47,
-                    "a2": 0.135,
-                    "a3": 0.037,
-                })
+                "method": spatial_window_method,
+                "params": spatial_window_params,
             },
             "Downsampling": {
-                "method": kwargs.get("downsampling_method", ""),
-                "params": kwargs.get("downsampling_params", {
-                    "factor": 1,
-                })
+                "method": downsampling_method,
+                "params": downsampling_params,
             },
         }
 
         self.img_size = img_shape
-        self.xres, self.yres = kwargs.get("xres", 1.), kwargs.get("yres", 1.)  # Relationship between displacement in pixels and millimeters
 
         self.current_position = np.array([0, 0])  # In pixels
         self.number_of_displacements = 0
@@ -85,7 +96,13 @@ class VisualOdometer:
         match method:
             case "svd":
                 self.analyze_method = pc_analyze_image
-                self.compute_displacement_method = lambda fft_beg, fft_end: svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], phase_windowing="central")
+                self.compute_displacement_method = lambda fft_beg, fft_end: svd_method(
+                    fft_beg,
+                    fft_end,
+                    self.img_size[1],
+                    self.img_size[0],
+                    phase_windowing="central",
+                )
 
             case "phase-correlation":
                 self.analyze_method = pc_analyze_image
@@ -93,11 +110,23 @@ class VisualOdometer:
 
             case "projection-svd":
                 self.analyze_method = pc_analyze_image
-                self.compute_displacement_method = lambda fft_beg, fft_end: proj_svd_method(fft_beg, fft_end, self.img_size[1], self.img_size[0], dx_max=30, dy_max=30, phase_windowing="central")
+                self.compute_displacement_method = lambda fft_beg, fft_end: (
+                    proj_svd_method(
+                        fft_beg,
+                        fft_end,
+                        self.img_size[1],
+                        self.img_size[0],
+                        dx_max=30,
+                        dy_max=30,
+                        phase_windowing="central",
+                    )
+                )
 
             case "phase-amplified-correlation":
                 self.analyze_method = pc_analyze_image
-                self.compute_displacement_method = lambda fft_beg, fft_end: phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
+                self.compute_displacement_method = lambda fft_beg, fft_end: (
+                    phase_amplified_correlation_method(fft_beg, fft_end, gain=3)
+                )
 
             case "orb":
                 self.analyze_method = orb_analyze_image
@@ -124,11 +153,12 @@ class VisualOdometer:
         return self._estimate_displacement(fft_beg, fft_end)
 
     def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
-        _deltax, _deltay, q = self.compute_displacement_method(fft_beg, fft_end)
+        deltax, deltay, q = self.compute_displacement_method(fft_beg, fft_end)
 
-        # Convert from pixels to millimeters (or equivalent):
-        deltax, deltay = _deltax * self.xres, _deltay * self.yres
-        self.current_position = np.array([self.current_position[0] + deltax, self.current_position[1] + deltay])
+        self.current_position = np.array(
+            [self.current_position[0] + deltax, self.current_position[1] + deltay]
+        )
+
         return deltax, deltay, q
 
     def get_displacement(self):
@@ -138,10 +168,15 @@ class VisualOdometer:
         :return: Next x and y displacements in mm
         """
         try:
-            reprocess_displacement = self.configs["Displacement Estimation"]["reprocess_displacement"]
+            reprocess_displacement = self.configs["Displacement Estimation"][
+                "reprocess_displacement"
+            ]
             skip_frames = self.configs["Displacement Estimation"]["skip_frames"]
 
-            if self.imgs_processed[0] is not None and self.imgs_processed[1] is not None:
+            if (
+                self.imgs_processed[0] is not None
+                and self.imgs_processed[1] is not None
+            ):
                 spectrum_beg = self.imgs_processed[0]
                 original_img_beg = self.imgs_original[0]
 
@@ -152,17 +187,28 @@ class VisualOdometer:
                 # Estimar deslocamento bruto
                 displacement = self._estimate_displacement(spectrum_beg, spectrum_end)
                 if reprocess_displacement:
-                    count = self.configs["Displacement Estimation"]["params"].get("reprocess_displacement_count", 1)
+                    count = self.configs["Displacement Estimation"]["params"].get(
+                        "reprocess_displacement_count", 1
+                    )
                     for _ in range(count):
-                        round_dx = int(round(displacement[0]))
-                        round_dy = int(round(displacement[1]))
-                        crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(original_img_beg, original_img_end,
-                                                                                     round_dx, round_dy)
-                        new_displacement = self.estimate_displacement_between(crop_img_beg, crop_img_end)
-                        displacement = [round_dx + new_displacement[0], round_dy + new_displacement[1], new_displacement[2]]
+                        round_dx = round(displacement[0])
+                        round_dy = round(displacement[1])
+                        crop_img_beg, crop_img_end = crop_two_imgs_with_displacement(
+                            original_img_beg, original_img_end, round_dx, round_dy
+                        )
+                        new_displacement = self.estimate_displacement_between(
+                            crop_img_beg, crop_img_end
+                        )
+                        displacement = [
+                            round_dx + new_displacement[0],
+                            round_dy + new_displacement[1],
+                            new_displacement[2],
+                        ]
 
                 if skip_frames:
-                    threshold = self.configs["Displacement Estimation"]["params"]["skip_frames_threshold"]
+                    threshold = self.configs["Displacement Estimation"]["params"][
+                        "skip_frames_threshold"
+                    ]
                     if np.linalg.norm(displacement) < threshold:
                         # Não atualiza a imagem base (mantém img_beg)
                         return 0.0, 0.0
@@ -200,4 +246,3 @@ class VisualOdometer:
             with self.imgs_lock:
                 self.imgs_processed[1] = new_img
                 self.imgs_original[1] = img
-
