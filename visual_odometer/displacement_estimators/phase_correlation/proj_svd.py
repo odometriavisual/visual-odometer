@@ -1,7 +1,7 @@
 import numpy as np
-
 from numpy.typing import NDArray
 from scipy.sparse.linalg import svds as svds_cpu
+
 from visual_odometer.dsp import normalized_cps
 
 from .common import phase_unwrap
@@ -115,7 +115,7 @@ def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex6
 
     Q_filtered = np.fft.fft2(Cn_t_proj)
 
-    qu, s, qv = svds_cpu(Q_filtered, k=1)
+    qu, _s, qv = svds_cpu(Q_filtered, k=1)
     ang_qu = phase_unwrap(np.angle(qu[:, 0]), unwrap_method)
     ang_qv = phase_unwrap(np.angle(qv[0, :]), unwrap_method)
 
@@ -128,4 +128,4 @@ def proj_svd_method(fft_beg: NDArray[np.complex64], fft_end: NDArray[np.complex6
 
     quality = np.max(np.abs([residualsx, residualsy]))
 
-    return deltax, deltay, quality
+    return deltax, deltay, 0, 1, quality

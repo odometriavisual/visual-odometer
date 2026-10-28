@@ -21,10 +21,12 @@ odometer.get_displacement()
 
 t0 = time.time()
 
+number_of_displacements = 0
 for img_path, img in img_stream:
     ti0 = time.time()
     odometer.feed_image(img)
     odometer.get_displacement()
+    number_of_displacements += 1
     ti1 = time.time()
     print(f'{img_path}: dt={(ti1-ti0)*1000:.3f}ms')
 
@@ -34,7 +36,7 @@ delta_t = t1 - t0
 
 print(f"""
 Number of frames: {len(img_stream)}
-Processed frames: {odometer.number_of_displacements} out of {len(img_stream)}
-Real FPS = {odometer.number_of_displacements / delta_t:.2f}"
+Processed frames: {number_of_displacements} out of {len(img_stream)}
+Real FPS = {number_of_displacements / delta_t:.2f}"
 """)
 

@@ -4,11 +4,12 @@ Important pre-processing steps such as windowing and downsampling.
 
 """
 
-from PIL import Image
 import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 
 from visual_odometer import dsp
+
 
 def apply_spatial_window(img: NDArray, method, params: dict) -> NDArray:
     """

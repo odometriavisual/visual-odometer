@@ -5,6 +5,7 @@ import numpy as np
 from visual_odometer.displacement_estimators import (
     orb_analyze_image,
     orb_method,
+    orb_method_affine,
     pc_analyze_image,
     phase_amplified_correlation_method,
     phase_correlation_method,
@@ -85,9 +86,6 @@ class VisualOdometer:
 
         self.img_size = img_shape
 
-        self.current_position = np.array([0, 0])  # In pixels
-        self.number_of_displacements = 0
-
         self.imgs_lock = threading.Lock()
         self.imgs_processed = [None, None]
         self.imgs_original = [None, None]
@@ -133,6 +131,10 @@ class VisualOdometer:
                 self.analyze_method = orb_analyze_image
                 self.compute_displacement_method = orb_method
 
+            case "orb-affine":
+                self.analyze_method = orb_analyze_image
+                self.compute_displacement_method = orb_method_affine
+
             case _:
                 raise ValueError(f"Displacement estimation method {method} not valid.")
 
@@ -147,20 +149,15 @@ class VisualOdometer:
 
         :param img_beg: Image at t = t_0
         :param img_end: Image at t = t₀ + Δt
-        :return: x and y displacements in mm
+        :return: x, y, theta, scale, q
         """
         fft_beg = self.analyze_method(img_beg, self.configs)
         fft_end = self.analyze_method(img_end, self.configs)
         return self._estimate_displacement(fft_beg, fft_end)
 
     def _estimate_displacement(self, fft_beg, fft_end) -> (float, float):
-        deltax, deltay, q = self.compute_displacement_method(fft_beg, fft_end)
-
-        self.current_position = np.array(
-            [self.current_position[0] + deltax, self.current_position[1] + deltay]
-        )
-
-        return deltax, deltay, q
+        deltax, deltay, dtheta, scale, q = self.compute_displacement_method(fft_beg, fft_end)
+        return deltax, deltay, dtheta, scale, q
 
     def get_displacement(self):
         """
@@ -200,10 +197,11 @@ class VisualOdometer:
                         new_displacement = self.estimate_displacement_between(
                             crop_img_beg, crop_img_end
                         )
+
                         displacement = [
                             round_dx + new_displacement[0],
                             round_dy + new_displacement[1],
-                            new_displacement[2],
+                            *new_displacement,
                         ]
 
                 if skip_frames:
@@ -212,21 +210,18 @@ class VisualOdometer:
                     ]
                     if np.linalg.norm(displacement) < threshold:
                         # Não atualiza a imagem base (mantém img_beg)
-                        return 0.0, 0.0
+                        return 0, 0, 0, 1, 0
 
                 # Atualiza img base apenas se deslocamento foi aceito
                 self.imgs_processed[0] = spectrum_end
                 self.imgs_original[0] = original_img_end
 
-                self.current_position[0] += displacement[0]
-                self.current_position[1] += displacement[1]
-                self.number_of_displacements += 1
-
                 return displacement
             else:
-                return 0.0, 0.0, 1.0
+                return 0, 0, 0, 1, 0
+
         except NotImplementedError:
-            return None, None, 1.0
+            return 0, 0, 0, 1, 0
 
     def feed_image(self, img) -> None:
         """

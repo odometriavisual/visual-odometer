@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
-
 from scipy.sparse.linalg import svds as svds_cpu
+
 from visual_odometer.dsp import normalized_cps
 
 from .common import phase_unwrap
@@ -76,7 +76,7 @@ def svd_estimate_shift(phase_vec: NDArray[np.float32], N: int, phase_windowing =
             raise ValueError(f"Invalid windowing method: {phase_windowing}")
 
 
-    mu, c, residuals = linear_regression(x, y)
+    mu, _c, residuals = linear_regression(x, y)
     return mu * N / (2 * np.pi), residuals
 
 
@@ -118,7 +118,7 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_
     """
     Q = normalized_cps(fft_beg, fft_end)
 
-    qu, s, qv = svds_cpu(Q, k=1)
+    qu, _s, qv = svds_cpu(Q, k=1)
     ang_qu = phase_unwrap(np.angle(qu[:, 0]), unwrap_method)
     ang_qv = phase_unwrap(np.angle(qv[0, :]), unwrap_method)
 
@@ -128,4 +128,4 @@ def svd_method(fft_beg, fft_end, M: int, N: int, phase_windowing = None, unwrap_
 
     quality = np.max(np.abs([residualsx, residualsy]))
 
-    return deltax, deltay, quality
+    return deltax, deltay, 0, 1, quality
