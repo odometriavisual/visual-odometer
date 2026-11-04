@@ -1,11 +1,19 @@
 import cv2
 import numpy as np
 
-_orb = cv2.ORB.create()
+_orb = cv2.ORB.create(
+    nfeatures=200,
+    scaleFactor=2,
+    nlevels=8,
+    edgeThreshold=11,
+    patchSize=25,
+    fastThreshold=11
+)
 _matcher = cv2.BFMatcher(cv2.NORM_HAMMING, True)
 
 def orb_analyze_image(img, config: dict):
-    kp, des = _orb.detectAndCompute(img, None)
+    filtrada = cv2.GaussianBlur(img, (3, 3), -1)
+    kp, des = _orb.detectAndCompute(filtrada, None)
     return [kp, des]
 
 def orb_method(beg, end):
@@ -42,8 +50,6 @@ def orb_method_affine(beg, end):
             .reshape(-1, 1, 2)
             .astype(np.float32)
         )
-
-        print(len(kp1), len(matches), len(des1))
 
         ret, inliers = cv2.estimateAffine2D(kp0, kp1, method=cv2.RANSAC)
 
